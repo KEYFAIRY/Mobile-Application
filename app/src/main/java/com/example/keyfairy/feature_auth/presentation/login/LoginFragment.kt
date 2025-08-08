@@ -27,7 +27,7 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Asegúrate de que el menú inferior esté oculto cuando este fragmento se muestra
+
         (activity as? MainActivity)?.setBottomNavVisibility(false)
 
         binding.tvRegisterLink.setOnClickListener {
@@ -38,8 +38,6 @@ class LoginFragment : Fragment() {
         }
 
         binding.btnLogin.setOnClickListener {
-            // Llama a la función de la actividad para navegar al HomeFragment
-            // y mostrar el menú inferior.
             (activity as? MainActivity)?.replaceFragment(HomeFragment(), true)
         }
     }
