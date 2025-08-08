@@ -12,6 +12,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Keyfairy">
         <activity
+            android:name=".feature_auth.presentation.sign_up.Sign_upActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_auth.presentation.login.LoginActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
