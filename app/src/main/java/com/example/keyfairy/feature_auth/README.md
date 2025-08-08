@@ -7,7 +7,7 @@ This package contains features related to:
 ## Associated UI:
 
 ### Sign up
-![img.png](img.png)
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/f374c9c4-0e24-4017-be8a-48218e5ecb49" />
 
 ### Login
-![img_1.png](img_1.png)
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/f28bbfac-6911-4b44-92de-c787b8408afa" />
