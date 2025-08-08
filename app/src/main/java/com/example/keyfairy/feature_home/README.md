@@ -6,4 +6,3 @@ This package contains features related to:
 ## Associated UI:
 
 ### Home
-![img.png](img.png)

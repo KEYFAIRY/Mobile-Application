@@ -7,5 +7,4 @@ This package contains features related to:
 ## Associated UI:
 
 ### Profile
-![img.png](img.png)
 
