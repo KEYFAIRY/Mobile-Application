@@ -7,7 +7,5 @@ This package contains everything related to:
 ## Associated UI:
 
 ### Reports List
-![img_1.png](img_1.png)
 
 ### Report Details
-![img.png](img.png)

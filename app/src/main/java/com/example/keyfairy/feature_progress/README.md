@@ -6,5 +6,4 @@ This package contains features related to:
 ## Associated UI:
 
 ### Progress
-![img.png](img.png)
 
