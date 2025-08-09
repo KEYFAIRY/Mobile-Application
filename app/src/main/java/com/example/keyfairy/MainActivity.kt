@@ -9,6 +9,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.keyfairy.feature_auth.presentation.login.LoginFragment
 import com.example.keyfairy.feature_home.presentation.HomeFragment
+import com.example.keyfairy.feature_progress.presentation.ProgressFragment
+import com.example.keyfairy.feature_practice.presentation.PracticeFragment
+import com.example.keyfairy.feature_profile.presentation.ProfileFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -21,7 +24,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bottomNavigationView = findViewById(R.id.bottom_navigation_view)
-        bottomNavigationView.visibility = View.GONE // Oculta la barra al inicio
+        bottomNavigationView.visibility = View.GONE // Oculta barra al inicio
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
@@ -37,15 +40,26 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
+                R.id.navigation_progress -> {
+                    replaceFragment(ProgressFragment(), true)
+                    true
+                }
+                R.id.navigation_practice -> {
+                    replaceFragment(PracticeFragment(), true)
+                    true
+                }
                 R.id.navigation_home -> {
                     replaceFragment(HomeFragment(), true)
+                    true
+                }
+                R.id.navigation_profile -> {
+                    replaceFragment(ProfileFragment(), true)
                     true
                 }
                 else -> false
             }
         }
     }
-
 
     fun replaceFragment(fragment: Fragment, showBottomNav: Boolean) {
         supportFragmentManager.beginTransaction()
@@ -54,6 +68,7 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView.visibility = if (showBottomNav) View.VISIBLE else View.GONE
     }
+
     fun setBottomNavVisibility(isVisible: Boolean) {
         bottomNavigationView.visibility = if (isVisible) View.VISIBLE else View.GONE
     }
