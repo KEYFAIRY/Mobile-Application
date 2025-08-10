@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("com.chaquo.python")
 }
 
 android {
@@ -15,6 +16,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // On Apple silicon, you can omit x86_64.
+            abiFilters += listOf("arm64-v8a", "x86_64", "x86")
+        }
     }
 
     buildTypes {
@@ -32,6 +38,15 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.11"  // Python version
+        pip {
+            install("matplotlib")
+        }
     }
 }
 
