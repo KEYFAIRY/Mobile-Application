@@ -48,7 +48,8 @@ chaquopy {
     defaultConfig {
         version = "3.11"  // Python version
         pip {
-            install("matplotlib")
+            install("numpy==1.26.2")
+            install("music21 == 9.7.0")
         }
     }
 }
