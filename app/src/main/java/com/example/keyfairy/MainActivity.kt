@@ -11,12 +11,16 @@ import com.example.keyfairy.feature_auth.presentation.login.LoginFragment
 import com.example.keyfairy.feature_home.presentation.HomeFragment
 import com.example.keyfairy.feature_progress.presentation.ProgressFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
+import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
 import com.example.keyfairy.feature_profile.presentation.ProfileFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import androidx.lifecycle.ViewModelProvider
+
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigationView: BottomNavigationView
+    private lateinit var practiceViewModel: PracticeViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +29,9 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView = findViewById(R.id.bottom_navigation_view)
         bottomNavigationView.visibility = View.GONE // Oculta barra al inicio
+
+        practiceViewModel = ViewModelProvider(this)[PracticeViewModel::class.java]
+        practiceViewModel.cargarEscalas(this)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()

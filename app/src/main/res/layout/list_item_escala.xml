@@ -13,11 +13,14 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
-        android:background="#E8EAF6"> <ImageView
+        android:background="#E8EAF6">
+        <ImageView
         android:id="@+id/icon"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/play_blue" /> <LinearLayout
+        android:src="@drawable/play_blue" />
+
+        <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"

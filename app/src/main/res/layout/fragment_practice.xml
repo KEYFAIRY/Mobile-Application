@@ -19,6 +19,12 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="32dp"/>
+    <EditText
+        android:id="@+id/editTextFiltro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Filtrar por nota (ej. Do, Re, Mi...)"
+        android:inputType="text" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_escalas"

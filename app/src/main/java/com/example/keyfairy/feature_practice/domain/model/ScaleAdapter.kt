@@ -1,5 +1,6 @@
 package com.example.keyfairy.feature_practice.domain.model
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,12 +8,14 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
 
-class ScaleAdapter(private val escalas: List<String>) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
+class ScaleAdapter(private var listaCompleta: List<String> = emptyList()) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
+
+
+    private var listaFiltrada = listaCompleta.toMutableList()
 
     class ScaleViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val nombreEscala: TextView = view.findViewById(R.id.text_nombre_escala)
-        val notasEscala: TextView = view.findViewById(R.id.text_notas)
-        val fecha: TextView = view.findViewById(R.id.text_fecha)
+        val escalaCompleta: TextView = view.findViewById(R.id.text_nombre_escala)
+        val notasTextView: TextView = view.findViewById(R.id.text_notas)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScaleViewHolder {
@@ -22,20 +25,37 @@ class ScaleAdapter(private val escalas: List<String>) : RecyclerView.Adapter<Sca
     }
 
     override fun onBindViewHolder(holder: ScaleViewHolder, position: Int) {
-        val item = escalas[position]
-        val partes = item.split(":", limit = 2)
+        val item = listaFiltrada[position]
+        val partes = item.split(":")
+        val nombre = partes.getOrNull(0)?.trim() ?: ""
+        val notas = partes.getOrNull(1)?.trim() ?: ""
 
-        if (partes.size == 2) {
-            holder.nombreEscala.text = partes[0].trim()
-            holder.notasEscala.text = "Notas: ${partes[1].trim()}"
-        } else {
-            holder.nombreEscala.text = item
-            holder.notasEscala.text = "Notas: N/A"
-        }
-
-        // Fecha fija por ahora
-        holder.fecha.text = "Fecha: Aun no las has practicado"
+        holder.escalaCompleta.text = nombre
+        holder.notasTextView.text = notas
     }
 
-    override fun getItemCount() = escalas.size
+    override fun getItemCount() = listaFiltrada.size
+
+
+    fun updateData(nuevosDatos: List<String>) {
+        listaCompleta = nuevosDatos
+        listaFiltrada = nuevosDatos.toMutableList()
+        notifyDataSetChanged()
+    }
+
+    fun filtrarPorNota(nota: String) {
+        Log.d("ScaleAdapter", "Filtrando por nombre de nota: $nota")
+
+        listaFiltrada = if (nota.isBlank()) {
+            listaCompleta.toMutableList()
+        } else {
+            listaCompleta.filter {
+                val partes = it.split(":")
+                val nombre = partes.getOrNull(0)?.trim() ?: ""
+                nombre.contains(nota, ignoreCase = true)
+            }.toMutableList()
+        }
+
+        notifyDataSetChanged()
+    }
 }
