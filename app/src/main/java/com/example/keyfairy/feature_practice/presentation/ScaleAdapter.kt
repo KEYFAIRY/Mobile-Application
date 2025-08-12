@@ -1,21 +1,24 @@
-package com.example.keyfairy.feature_practice.domain.model
+package com.example.keyfairy.feature_practice.presentation
 
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
 
-class ScaleAdapter(private var listaCompleta: List<String> = emptyList()) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
+class ScaleAdapter(private var listaCompleta: List<String> = emptyList(), private val onPracticeClick: (String) -> Unit) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
 
 
     private var listaFiltrada = listaCompleta.toMutableList()
 
+
     class ScaleViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val escalaCompleta: TextView = view.findViewById(R.id.text_nombre_escala)
         val notasTextView: TextView = view.findViewById(R.id.text_notas)
+        val practiceButton: ImageView = view.findViewById(R.id.practice_button)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScaleViewHolder {
@@ -32,6 +35,10 @@ class ScaleAdapter(private var listaCompleta: List<String> = emptyList()) : Recy
 
         holder.escalaCompleta.text = nombre
         holder.notasTextView.text = notas
+
+        holder.practiceButton.setOnClickListener {
+            onPracticeClick(item)
+        }
     }
 
     override fun getItemCount() = listaFiltrada.size

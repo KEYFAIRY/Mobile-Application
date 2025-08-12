@@ -15,7 +15,7 @@
         android:gravity="center_vertical"
         android:background="#E8EAF6">
         <ImageView
-        android:id="@+id/icon"
+        android:id="@+id/practice_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:src="@drawable/play_blue" />

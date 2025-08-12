@@ -1,5 +1,6 @@
 package com.example.keyfairy.feature_practice.presentation
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -16,7 +17,7 @@ import com.chaquo.python.android.AndroidPlatform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.keyfairy.feature_practice.domain.model.ScaleAdapter
+import com.example.keyfairy.feature_practice.presentation.ScaleAdapter
 import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
 import android.widget.EditText
 import androidx.core.widget.addTextChangedListener
@@ -40,7 +41,18 @@ class PracticeFragment : Fragment() {
         recyclerView = view.findViewById(R.id.recycler_view_escalas)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        escalasAdapter = ScaleAdapter()
+        escalasAdapter = ScaleAdapter(emptyList()) { escalaSeleccionada ->
+            val fragment = SpeedAndDistanceFragment().apply {
+                arguments = Bundle().apply {
+                    putString("escala_data", escalaSeleccionada)
+                }
+            }
+
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit()
+        }
         recyclerView.adapter = escalasAdapter
 
         viewModel = androidx.lifecycle.ViewModelProvider(requireActivity())[PracticeViewModel::class.java]
