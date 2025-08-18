@@ -5,6 +5,9 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageView
+import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 
 // TODO: Rename parameter arguments, choose names that match
@@ -28,6 +31,7 @@ class CalibrateFragment : Fragment() {
             param1 = it.getString(ARG_PARAM1)
             param2 = it.getString(ARG_PARAM2)
         }
+
     }
 
     override fun onCreateView(
@@ -36,6 +40,17 @@ class CalibrateFragment : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_calibrate, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val continueButton: Button = view.findViewById(R.id.button_continue)
+
+        // Example: set click listener
+        continueButton.setOnClickListener {
+            (activity as? MainActivity)?.replaceFragment(CalibrateCameraFragment(), true)
+        }
     }
 
     companion object {

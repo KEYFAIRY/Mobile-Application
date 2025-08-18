@@ -50,6 +50,7 @@ chaquopy {
         pip {
             install("numpy==1.26.2")
             install("music21 == 9.7.0")
+            install("opencv-python-headless == 4.12.0.88")
         }
     }
 }
@@ -67,5 +68,12 @@ dependencies {
 
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+
+
+    // Dependencias CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
 }
