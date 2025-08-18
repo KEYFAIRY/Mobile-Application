@@ -16,7 +16,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Horizontal guideline at 70% from top -->
+    <FrameLayout
+        android:id="@+id/drawingContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintStart_toStartOf="parent"
+        android:background="@android:color/transparent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Porcion libre para el piano -->
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline"
         android:layout_width="wrap_content"
@@ -24,7 +34,7 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.4" />
 
-    <!-- Blur Overlay for bottom 30% -->
+    <!-- Blur Overlay para la parte inferior -->
     <View
         android:id="@+id/blurOverlay"
         android:layout_width="match_parent"
@@ -34,5 +44,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,7 +2,10 @@ import cv2
 import numpy as np
 
 RESIZE_WIDTH = 450
+# Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
 PIANO_AREA_XSECTION_OFFSET = 10
+# Define el porcentaje de la imagen original que corresponde al piano para su recorte
+PIANO_AREA_YSECTION_PERCENTAGE = 0.4
 
 def is_calibrated(byte_array_image):
 
@@ -55,11 +58,19 @@ def is_calibrated(byte_array_image):
 
     # cv2.imdecode leer la imagen del Numpy array
     raw_frame = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
-    original_height, original_width = image_raw.shape[:2]
+    # Get image dimensions
+    original_height, original_width = raw_frame.shape
+    # Calculate the number of pixels to keep
+    keep_height = int(original_height * PIANO_AREA_YSECTION_PERCENTAGE)
+    # Crop from top (remove 30% from top)
+    cropped_frame = raw_frame[:keep_height, :]
+
+
+    original_height, original_width = cropped_frame.shape[:2]
     aspect_ratio = RESIZE_WIDTH / original_width
     new_height = int(original_height * aspect_ratio)
 
-    img = cv2.resize(image_raw, (RESIZE_WIDTH, new_height))
+    img = cv2.resize(cropped_frame, (RESIZE_WIDTH, new_height))
 
     # Aplicar Gaussian Blur para reducir ruido de la imagen
     blur = cv2.bilateralFilter(img,9,50,100)
@@ -112,6 +123,16 @@ def is_calibrated(byte_array_image):
     )
 
     if corners_st is not None:
+        scale_x = original_width / RESIZE_WIDTH
+        scale_y = original_height / new_height
+
+        resized_dimensions_corners = []
+        for corner in corners_st:
+            x, y = corner.ravel()
+            resized_dimensions_corners.append((x,y))
+
+        original_dimensions_corners = [(int(x * scale_x), int(y * scale_y)) for (x, y) in resized_dimensions_corners]
+
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
             return True
         else:
