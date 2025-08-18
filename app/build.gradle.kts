@@ -46,11 +46,13 @@ android {
 
 chaquopy {
     defaultConfig {
-        version = "3.11"  // Python version
+        version = "3.8"  // Python version
         pip {
-            install("numpy==1.26.2")
-            install("music21 == 9.7.0")
-            install("opencv-python-headless == 4.12.0.88")
+            install("numpy")
+            install("music21 == 8.3.0")
+//            install("opencv-python-headless==4.5.3.56")
+            install("opencv-python-headless==4.5.1.48")
+
         }
     }
 }
