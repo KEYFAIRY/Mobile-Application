@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import json
 
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
@@ -129,17 +130,27 @@ def is_calibrated(byte_array_image):
         resized_dimensions_corners = []
         for corner in corners_st:
             x, y = corner.ravel()
-            resized_dimensions_corners.append((x,y))
+            resized_dimensions_corners.append((x, y))
 
-        original_dimensions_corners = [(int(x * scale_x), int(y * scale_y)) for (x, y) in resized_dimensions_corners]
+        # FIX: Use lists, not tuples
+        original_dimensions_corners = [[int(x * scale_x), int(y * scale_y)] for (x, y) in resized_dimensions_corners]
 
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
-            return True
+            return json.dumps({
+                'success': True,
+                'corners': original_dimensions_corners
+            })
         else:
-            return False
-
+            return json.dumps({
+                'success': False,
+                'corners': original_dimensions_corners
+            })
     else:
-        return False
+        return json.dumps({
+            'success': False,
+            'corners': None
+        })
+
 
 
 

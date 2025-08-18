@@ -37,6 +37,7 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import androidx.core.view.doOnLayout
+import org.json.JSONObject
 
 class CalibrateCameraFragment : Fragment() {
 
@@ -157,20 +158,17 @@ class CalibrateCameraFragment : Fragment() {
 
             imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                 if (shouldCaptureFrame) {
-                    val isCalibrated = imageProxyToBitmap(imageProxy) // Changed variable name
-
-                    if (isCalibrated == true) { // Fixed comparison
-                        // Your logic here when calibration is successful
-                        view?.post {
+                    val (success, corners) = imageProxyToCalibrationResult(imageProxy) // Now returns Pair<Boolean, List<Pair<Int, Int>>?>
+                    view?.post {
+                        if (success && corners != null) {
                             Log.i("ATENCION", "CALIBRATION SUCCESS - IMAGE PROCESSED")
-                            // You can add UI updates here if needed
-                        }
-                    } else {
-                        view?.post {
+                            Log.i("ATENCION", corners.toString())
+                            drawCornersOnOverlay(corners) // Draw the corners if you want
+                        } else {
                             Log.i("ATENCION", "CALIBRATION FAILED - IMAGE NOT CALIBRATED")
+                            drawCornersOnOverlay(emptyList()) // Optionally clear overlay
                         }
                     }
-
                     shouldCaptureFrame = false
                 }
                 imageProxy.close()
@@ -199,9 +197,8 @@ class CalibrateCameraFragment : Fragment() {
     }
 
 
-    private fun imageProxyToBitmap(imageProxy: ImageProxy): Boolean {
-        val image = imageProxy.image ?: return false // Return false if image is null
-
+    private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<Boolean, List<Pair<Int, Int>>?> {
+        val image = imageProxy.image ?: return Pair(false, null)
         try {
             val yBuffer = image.planes[0].buffer // Y
             val vuBuffer = image.planes[2].buffer // VU
@@ -210,29 +207,58 @@ class CalibrateCameraFragment : Fragment() {
             val vuSize = vuBuffer.remaining()
 
             val nv21 = ByteArray(ySize + vuSize)
-
-            // Copy Y and VU data into NV21 array
             yBuffer.get(nv21, 0, ySize)
             vuBuffer.get(nv21, ySize, vuSize)
 
-            // Convert NV21 to JPEG
             val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 90, out)
-
             val imageBytes = out.toByteArray()
 
             val py = Python.getInstance()
             val module = py.getModule("calibracion")
+            val rsp = module.callAttr("is_calibrated", imageBytes).toString() // Get JSON string
 
-            val rsp: Boolean = module.callAttr("is_calibrated", imageBytes).toJava(Boolean::class.java)
-
-            return rsp // Simplified return
-
+            val json = JSONObject(rsp)
+            val success = json.getBoolean("success")
+            val cornersJson = json.optJSONArray("corners")
+            val corners = cornersJson?.let { arr ->
+                (0 until arr.length()).mapNotNull { i ->
+                    val point = arr.optJSONArray(i)
+                    if (point != null && point.length() == 2) {
+                        val x = point.optInt(0)
+                        val y = point.optInt(1)
+                        Pair(x, y)
+                    } else null
+                }
+            }
+            return Pair(success, corners)
         } catch (e: Exception) {
             Log.e("ImageProcessing", "Error processing image: ${e.message}")
-            return false
+            return Pair(false, null)
         }
+    }
+
+    private fun drawCornersOnOverlay(corners: List<Pair<Int, Int>>) {
+        val overlay = view?.findViewById<FrameLayout>(R.id.drawingContainer) ?: return
+        overlay.removeAllViews()
+        val customView = object : View(requireContext()) {
+            private val paint = Paint().apply {
+                color = Color.RED
+                style = Paint.Style.FILL
+                strokeWidth = 16f
+            }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                for ((x, y) in corners) {
+                    canvas.drawCircle(x.toFloat(), y.toFloat(), 20f, paint)
+                }
+            }
+        }
+        overlay.addView(customView, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
     }
 
     private fun stopAutomaticCapture() {
