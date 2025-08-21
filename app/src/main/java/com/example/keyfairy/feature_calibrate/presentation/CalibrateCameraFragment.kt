@@ -52,7 +52,9 @@ class CalibrateCameraFragment : Fragment() {
     private lateinit var previewView: PreviewView
     private lateinit var cameraExecutor: ExecutorService
 
-    private lateinit var drawingContainer: FrameLayout
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var imageAnalysis: ImageAnalysis? = null
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -78,17 +80,9 @@ class CalibrateCameraFragment : Fragment() {
 
 //      Una vez se confirma el permiso de la camara se empieza la toma de frames.
             startAutomaticCapture()
-
         } else {
             requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
         }
-
-        drawingContainer = view.findViewById<FrameLayout>(R.id.drawingContainer)
-        val customView = object : View(requireContext()) {}
-        drawingContainer.addView(customView, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -108,7 +102,7 @@ class CalibrateCameraFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            cameraProvider= cameraProviderFuture.get()
 
             // Preview
             val preview = Preview.Builder().build().also {
@@ -118,21 +112,24 @@ class CalibrateCameraFragment : Fragment() {
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             // ImageAnalysis for frame capture
-            val imageAnalysis = ImageAnalysis.Builder()
+            imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+            imageAnalysis?.setAnalyzer(cameraExecutor) { imageProxy ->
                 if (shouldCaptureFrame) {
-                    val (success, corners) = imageProxyToCalibrationResult(imageProxy) // Now returns Pair<Boolean, List<Pair<Int, Int>>?>
+                    val (success, corners) = imageProxyToCalibrationResult(imageProxy)
                     view?.post {
                         if (success && corners != null) {
                             Log.i("ATENCION", "CALIBRATION SUCCESS - IMAGE PROCESSED")
-                            Log.i("ATENCION", corners.toString())
-                            drawCornersOnOverlay(corners) // Draw the corners if you want
-                        } else {
+                            drawCornersOnOverlay(corners, true)
+                        }
+                        else if (!success && corners != null) {
+                            drawCornersOnOverlay(corners, false)
+                        }
+                        else {
                             Log.i("ATENCION", "CALIBRATION FAILED - IMAGE NOT CALIBRATED")
-                            drawCornersOnOverlay(emptyList()) // Optionally clear overlay
+                            drawCornersOnOverlay(emptyList(), false) // Optionally clear overlay
                         }
                     }
                     shouldCaptureFrame = false
@@ -141,9 +138,9 @@ class CalibrateCameraFragment : Fragment() {
             }
 
             try {
-                cameraProvider.unbindAll()
+                cameraProvider?.unbindAll()
                 // FIXED: Bind both preview AND imageAnalysis
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
+                cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
             } catch (exc: Exception) {
                 Log.e("CameraFragment", "Camera initialization failed", exc)
                 Toast.makeText(requireContext(), "Camera initialization failed", Toast.LENGTH_SHORT).show()
@@ -211,12 +208,16 @@ class CalibrateCameraFragment : Fragment() {
         }
     }
 
-    private fun drawCornersOnOverlay(corners: List<Pair<Int, Int>>) {
+    private fun drawCornersOnOverlay(corners: List<Pair<Int, Int>>, isCalibrated: Boolean) {
         val overlay = view?.findViewById<FrameLayout>(R.id.drawingContainer) ?: return
         overlay.removeAllViews()
         val customView = object : View(requireContext()) {
             private val paint = Paint().apply {
-                color = Color.RED
+                color = if (isCalibrated) {
+                    Color.GREEN
+                } else {
+                    Color.RED
+                }
                 style = Paint.Style.FILL
                 strokeWidth = 16f
             }
@@ -237,14 +238,20 @@ class CalibrateCameraFragment : Fragment() {
         captureRunnable?.let { captureHandler?.removeCallbacks(it) }
         captureHandler = null
         captureRunnable = null
+        shouldCaptureFrame = false
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()
+        stopCamera()
+        stopAutomaticCapture()
         if (this::cameraExecutor.isInitialized) {
-            stopAutomaticCapture()
             cameraExecutor.shutdown()
         }
+
+        cameraProvider = null
+        imageAnalysis = null
         requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
@@ -255,8 +262,33 @@ class CalibrateCameraFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
+        stopAutomaticCapture()
+        stopCamera()
         requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
+    }
+
+    private fun stopCamera() {
+        try {
+            imageAnalysis?.clearAnalyzer()
+            cameraProvider?.unbindAll()
+            imageAnalysis = null
+            shouldCaptureFrame = false
+
+            if (this::cameraExecutor.isInitialized && !cameraExecutor.isShutdown) {
+                cameraExecutor.shutdownNow() // Forces immediate stop of tasks
+            }
+
+            Log.d("Camera", "Camera stopped and executor shut down")
+        } catch (e: Exception) {
+            Log.e("Camera", "Error stopping camera: ${e.message}")
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        stopAutomaticCapture()
+        stopCamera()
     }
 }
 

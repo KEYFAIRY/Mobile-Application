@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import json
-import os
 
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
@@ -38,7 +37,7 @@ def is_calibrated(byte_array_image):
         cos_theta = np.clip(cos_theta, -1, 1)
 
         left_side_piano_angle = np.degrees(np.arccos(cos_theta))
-        print (f"L ANGLE: {np.degrees(np.arccos(cos_theta))}")
+        # print (f"L ANGLE: {np.degrees(np.arccos(cos_theta))}")
 
         BA = np.array(corner_xy_tuples[4]) - np.array(corner_xy_tuples[3])
         BC = np.array(corner_xy_tuples[5]) - np.array(corner_xy_tuples[3])
@@ -47,7 +46,7 @@ def is_calibrated(byte_array_image):
         cos_theta = np.clip(cos_theta, -1, 1)
 
         right_side_piano_angle = np.degrees(np.arccos(cos_theta))
-        print (f"R ANGLE: {np.degrees(np.arccos(cos_theta))}")
+        # print (f"R ANGLE: {np.degrees(np.arccos(cos_theta))}")
 
         # np.isnan(left_side_piano_angle) when is 90 degrees returns nan
         if ((np.isnan(left_side_piano_angle) or 85 <= left_side_piano_angle < 90) and (np.isnan(right_side_piano_angle) or 85 <= right_side_piano_angle < 90)):
@@ -62,14 +61,6 @@ def is_calibrated(byte_array_image):
     raw_frame = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
     # Get image dimensions
     original_height, original_width = raw_frame.shape
-    print(f"ANCHO OR: {original_width}")
-    print(f"ALTO PR: {original_height}")
-
-
-
-
-
-
 
     # Calculate the number of pixels to keep
     keep_height = int(original_height * PIANO_AREA_YSECTION_PERCENTAGE)
@@ -77,14 +68,9 @@ def is_calibrated(byte_array_image):
     cropped_frame = raw_frame[:keep_height, :]
 
     original_height, original_width = cropped_frame.shape[:2]
-    print(f"ANCHO CORTADO: {original_width}")
-    print(f"ALTO CORTADO: {original_height}")
-
 
     aspect_ratio = RESIZE_WIDTH / original_width
     new_height = int(original_height * aspect_ratio)
-
-
 
     img = cv2.resize(cropped_frame, (RESIZE_WIDTH, new_height))
 
@@ -145,11 +131,8 @@ def is_calibrated(byte_array_image):
             x, y = corner.ravel()
             compressed_dimensions_corners.append((int(x), int(y)))
 
-        # FIX: Use lists, not tuples
-        print(compressed_dimensions_corners)
 
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
-
             return json.dumps({
                 'success': True,
                 'corners': compressed_dimensions_corners
