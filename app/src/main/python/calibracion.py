@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import json
+import os
 
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
@@ -61,15 +62,29 @@ def is_calibrated(byte_array_image):
     raw_frame = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
     # Get image dimensions
     original_height, original_width = raw_frame.shape
+    print(f"ANCHO OR: {original_width}")
+    print(f"ALTO PR: {original_height}")
+
+
+
+
+
+
+
     # Calculate the number of pixels to keep
     keep_height = int(original_height * PIANO_AREA_YSECTION_PERCENTAGE)
-    # Crop from top (remove 30% from top)
+    # Crop from top (remove 40% from top)
     cropped_frame = raw_frame[:keep_height, :]
 
-
     original_height, original_width = cropped_frame.shape[:2]
+    print(f"ANCHO CORTADO: {original_width}")
+    print(f"ALTO CORTADO: {original_height}")
+
+
     aspect_ratio = RESIZE_WIDTH / original_width
     new_height = int(original_height * aspect_ratio)
+
+
 
     img = cv2.resize(cropped_frame, (RESIZE_WIDTH, new_height))
 
@@ -124,26 +139,25 @@ def is_calibrated(byte_array_image):
     )
 
     if corners_st is not None:
-        scale_x = original_width / RESIZE_WIDTH
-        scale_y = original_height / new_height
 
-        resized_dimensions_corners = []
+        compressed_dimensions_corners = []
         for corner in corners_st:
             x, y = corner.ravel()
-            resized_dimensions_corners.append((x, y))
+            compressed_dimensions_corners.append((int(x), int(y)))
 
         # FIX: Use lists, not tuples
-        original_dimensions_corners = [[int(x * scale_x), int(y * scale_y)] for (x, y) in resized_dimensions_corners]
+        print(compressed_dimensions_corners)
 
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
+
             return json.dumps({
                 'success': True,
-                'corners': original_dimensions_corners
+                'corners': compressed_dimensions_corners
             })
         else:
             return json.dumps({
                 'success': False,
-                'corners': original_dimensions_corners
+                'corners': compressed_dimensions_corners
             })
     else:
         return json.dumps({

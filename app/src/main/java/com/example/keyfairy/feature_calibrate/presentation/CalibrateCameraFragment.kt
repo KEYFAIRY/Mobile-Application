@@ -3,8 +3,6 @@ package com.example.keyfairy.feature_calibrate.presentation
 import android.Manifest
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ImageFormat
@@ -20,7 +18,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -29,27 +26,23 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.example.keyfairy.R
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import androidx.core.view.doOnLayout
 import org.json.JSONObject
 
 class CalibrateCameraFragment : Fragment() {
 
     private var captureHandler: Handler? = null
     private var captureRunnable: Runnable? = null
-    private val CAPTURE_INTERVAL = 3000L // 5 seconds
 
-    private var capturedBitmap: Bitmap? = null
+    // Segundos para tomar la imagen
+    private val CAPTURE_INTERVAL = 1000L // 1 seconds
+
     private var shouldCaptureFrame = false
-
-
-
 
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 100
@@ -61,17 +54,10 @@ class CalibrateCameraFragment : Fragment() {
 
     private lateinit var drawingContainer: FrameLayout
 
-
-
-
-
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-
         return inflater.inflate(R.layout.fragment_calibrate_camera, container, false)
     }
 
@@ -83,9 +69,6 @@ class CalibrateCameraFragment : Fragment() {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(requireContext()))
         }
-//        val py = Python.getInstance()
-//        val cv_module = py.getModule("calibracion")
-
 
         cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -100,30 +83,12 @@ class CalibrateCameraFragment : Fragment() {
             requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
         }
 
-
-
-
-
-        val drawingContainer = view.findViewById<FrameLayout>(R.id.drawingContainer)
-        val customView = object : View(requireContext()) {
-            private val paint = Paint().apply {
-                color = Color.RED
-                strokeWidth = 16f
-                style = Paint.Style.STROKE
-            }
-            override fun onDraw(canvas: Canvas) {
-                super.onDraw(canvas)
-                // Example: draw a diagonal line
-                canvas.drawLine(0f, 0f, width.toFloat(), height.toFloat(), paint)
-            }
-        }
+        drawingContainer = view.findViewById<FrameLayout>(R.id.drawingContainer)
+        val customView = object : View(requireContext()) {}
         drawingContainer.addView(customView, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         ))
-
-
-
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -147,6 +112,7 @@ class CalibrateCameraFragment : Fragment() {
 
             // Preview
             val preview = Preview.Builder().build().also {
+                previewView.scaleType = PreviewView.ScaleType.FILL_START  // <-- add this line
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -183,8 +149,8 @@ class CalibrateCameraFragment : Fragment() {
                 Toast.makeText(requireContext(), "Camera initialization failed", Toast.LENGTH_SHORT).show()
             }
         }, ContextCompat.getMainExecutor(requireContext()))
-    }
 
+    }
     private fun startAutomaticCapture() {
         captureHandler = Handler(Looper.getMainLooper())
         captureRunnable = object : Runnable {
@@ -195,7 +161,6 @@ class CalibrateCameraFragment : Fragment() {
         }
         captureHandler?.postDelayed(captureRunnable!!, CAPTURE_INTERVAL)
     }
-
 
     private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<Boolean, List<Pair<Int, Int>>?> {
         val image = imageProxy.image ?: return Pair(false, null)
@@ -211,6 +176,11 @@ class CalibrateCameraFragment : Fragment() {
             vuBuffer.get(nv21, ySize, vuSize)
 
             val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+
+            // Se divide entre 450 debido a que es la medida a la que se ajusta la imagen en python
+            // se hace un resize a 450px establecido por la constante RESIZE_WIDTH en calibracion.py
+            val scalingRatio = previewView.width / 450f
+
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 90, out)
             val imageBytes = out.toByteArray()
@@ -226,8 +196,10 @@ class CalibrateCameraFragment : Fragment() {
                 (0 until arr.length()).mapNotNull { i ->
                     val point = arr.optJSONArray(i)
                     if (point != null && point.length() == 2) {
-                        val x = point.optInt(0)
-                        val y = point.optInt(1)
+                        var x = point.optInt(0)
+                        var y = point.optInt(1)
+                        x = (x * scalingRatio).toInt()
+                        y = (y * scalingRatio).toInt()
                         Pair(x, y)
                     } else null
                 }
