@@ -4,15 +4,15 @@ import json
 
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
-PIANO_AREA_XSECTION_OFFSET = 10
-PIANO_AREA_YSECTION_OFFSET = 10
+PIANO_AREA_XSECTION_OFFSET = 20
+PIANO_AREA_YSECTION_OFFSET = 8
 RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 # Define el porcentaje de la imagen original que corresponde al piano para su recorte
 
-def is_calibrated(byte_array_image, pianoAreaPercentage):
+def is_calibrated(byte_array_image, piano_area_percentage):
 
-    def instruction_command(corners):
-
+    def instruction_command(corners, image_height):
+        bottom_side_limit = image_height - PIANO_AREA_YSECTION_OFFSET
         corner_xy_tuples = []
         for corner in corners:
             x, y = corner.ravel()
@@ -48,6 +48,10 @@ def is_calibrated(byte_array_image, pianoAreaPercentage):
             return "izquierda"
         if right_side_upper_corner[0] >= RIGHT_SIDE_LIMIT or right_side_lower_corner[0] >= RIGHT_SIDE_LIMIT:
             return "derecha"
+        if left_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET or right_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET:
+            return "adelante"
+        if left_side_lower_corner[1] >= bottom_side_limit or right_side_lower_corner[1] >= bottom_side_limit:
+            return "atras"
 
 
         return None
@@ -104,7 +108,7 @@ def is_calibrated(byte_array_image, pianoAreaPercentage):
     original_height, original_width = raw_frame.shape
 
     # Calculate the number of pixels to keep
-    keep_height = int(original_height * pianoAreaPercentage)
+    keep_height = int(original_height * piano_area_percentage)
     # Crop from top (remove 40% from top)
     cropped_frame = raw_frame[:keep_height, :]
 
@@ -166,7 +170,7 @@ def is_calibrated(byte_array_image, pianoAreaPercentage):
 
     if corners_st is not None:
 
-        print(instruction_command(corners_st))
+        print(instruction_command(corners_st, new_height))
 
         compressed_dimensions_corners = []
         for corner in corners_st:

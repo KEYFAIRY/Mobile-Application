@@ -9,6 +9,7 @@ import android.graphics.ImageFormat
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.YuvImage
+import android.media.SoundPool
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -56,6 +57,10 @@ class CalibrateCameraFragment : Fragment() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
 
+    // Variables reproduccion de audio
+    private lateinit var soundPool: SoundPool
+    private var soundId: Int = 0
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -69,6 +74,9 @@ class CalibrateCameraFragment : Fragment() {
         (activity as? MainActivity)?.enableFullscreen()
 
         previewView = view.findViewById(R.id.previewView)
+
+        // SoundPool encargado de ejecutar sonidos cortos
+        soundPool = SoundPool.Builder().setMaxStreams(1).build()
 
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(requireContext()))
@@ -243,6 +251,20 @@ class CalibrateCameraFragment : Fragment() {
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         ))
+    }
+
+    // -*-*-*-*-*-*-*-*Funciones para la ejecucion de audio-*-*-*-*-*-*-*-*-*-*-*-*
+    fun loadSound(resId: Int) {
+        soundId = soundPool.load(requireContext(), resId, 1)
+    }
+    fun playSound() {
+        soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
+    }
+    // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+    override fun onDestroy() {
+        super.onDestroy()
+        soundPool.release()
     }
 
     private fun stopAutomaticCapture() {
