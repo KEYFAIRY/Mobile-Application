@@ -35,10 +35,15 @@ class SpeedAndDistanceFragment : Fragment() {
         adapterMetronomo.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerMetronomo.adapter = adapterMetronomo
 
-        val cantidades = (1..3).toList()
+        val cantidades = (1..5).toList()
         val adapterCantidad = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, cantidades)
         adapterCantidad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCantidadEscalas.adapter = adapterCantidad
+
+        val notas = listOf("negra", "blanca","corchea")
+        val adapterNota = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, notas)
+        adapterNota.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerNota.adapter = adapterNota
 
         binding.buttonIniciarCalibracion.setOnClickListener {
             (activity as? MainActivity)?.replaceFragment(CalibrateFragment(), true)

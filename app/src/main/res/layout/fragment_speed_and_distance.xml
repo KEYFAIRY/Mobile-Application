@@ -71,7 +71,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cantidad de escalas (distancia)"
+            android:text="Cantidad de octavas (distancia)"
             android:textStyle="bold"
             android:paddingBottom="4dp" />
 
@@ -87,7 +87,32 @@
             android:layout_marginTop="8dp"
             android:spinnerMode="dropdown" />
 
+        <!-- Imagen y sección de distancia -->
+        <ImageView
+            android:layout_width="200dp"
+            android:layout_height="100dp"
+            android:src="@drawable/notes"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nota en la cual realizará la escala"
+            android:textStyle="bold"
+            android:paddingBottom="4dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray" />
+
+        <Spinner
+                android:id="@+id/spinner_nota"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:spinnerMode="dropdown" />
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
