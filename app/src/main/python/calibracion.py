@@ -5,10 +5,52 @@ import json
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
 PIANO_AREA_XSECTION_OFFSET = 10
+PIANO_AREA_YSECTION_OFFSET = 10
+RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 # Define el porcentaje de la imagen original que corresponde al piano para su recorte
-PIANO_AREA_YSECTION_PERCENTAGE = 0.4
 
-def is_calibrated(byte_array_image):
+def is_calibrated(byte_array_image, pianoAreaPercentage):
+
+    def instruction_command(corners):
+
+        corner_xy_tuples = []
+        for corner in corners:
+            x, y = corner.ravel()
+            corner_xy_tuples.append((x,y))
+
+        # Order by x coordinates
+        corner_xy_tuples.sort(key = lambda point: point[0])
+        left_side_upper_corner = ()
+        left_side_lower_corner = ()
+        right_side_upper_corner = ()
+        right_side_lower_corner = ()
+        if corner_xy_tuples[0][1] < corner_xy_tuples[1][1]:
+            left_side_upper_corner = corner_xy_tuples[0]
+            left_side_lower_corner = corner_xy_tuples[1]
+        else:
+            left_side_upper_corner = corner_xy_tuples[1]
+            left_side_lower_corner = corner_xy_tuples[0]
+        if corner_xy_tuples[2][1] < corner_xy_tuples[3][1]:
+            right_side_upper_corner = corner_xy_tuples[2]
+            right_side_lower_corner = corner_xy_tuples[3]
+        else:
+            right_side_upper_corner = corner_xy_tuples[3]
+            right_side_lower_corner = corner_xy_tuples[2]
+
+        # REVISION DE LA DIFERENCIA DEL PUNTO SALIDO SUMADO AL OTRO PUNTO INDICA SALIDA TAMBIEN RETORNAR ARRIBA
+
+        print(f"LU: {left_side_upper_corner}")
+        print(f"LL: {left_side_lower_corner}")
+        print(f"RU: {right_side_upper_corner}")
+        print(f"RL: {right_side_lower_corner}")
+
+        if left_side_upper_corner[0] <= PIANO_AREA_XSECTION_OFFSET or left_side_lower_corner[0] <= PIANO_AREA_XSECTION_OFFSET:
+            return "izquierda"
+        if right_side_upper_corner[0] >= RIGHT_SIDE_LIMIT or right_side_lower_corner[0] >= RIGHT_SIDE_LIMIT:
+            return "derecha"
+
+
+        return None
 
     def is_piano_inside_area(corners):
         for corner in corners:
@@ -54,7 +96,6 @@ def is_calibrated(byte_array_image):
         else:
             return False
 
-
     nparr = np.frombuffer(byte_array_image, np.uint8)
 
     # cv2.imdecode leer la imagen del Numpy array
@@ -63,7 +104,7 @@ def is_calibrated(byte_array_image):
     original_height, original_width = raw_frame.shape
 
     # Calculate the number of pixels to keep
-    keep_height = int(original_height * PIANO_AREA_YSECTION_PERCENTAGE)
+    keep_height = int(original_height * pianoAreaPercentage)
     # Crop from top (remove 40% from top)
     cropped_frame = raw_frame[:keep_height, :]
 
@@ -82,10 +123,9 @@ def is_calibrated(byte_array_image):
     beta = 1.2    # Increase brightness (shift all pixels up)
     bright_contrast_image = cv2.convertScaleAbs(blur, alpha=alpha, beta=beta)
 
-    # Define mejor el contraste, permite identificar mejor los bordes
-    equalized = cv2.equalizeHist(bright_contrast_image)
-
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    # Equilibra el brillo de la foto
+    # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(4,4))
     clahe_img = clahe.apply(bright_contrast_image)
     # Threshold permite indicar un colo minimo de pixel que se convertira a blanco, el reston negro
     _, thresh = cv2.threshold(clahe_img, 176, 255, cv2.THRESH_TOZERO)
@@ -126,12 +166,14 @@ def is_calibrated(byte_array_image):
 
     if corners_st is not None:
 
+        print(instruction_command(corners_st))
+
         compressed_dimensions_corners = []
         for corner in corners_st:
             x, y = corner.ravel()
             compressed_dimensions_corners.append((int(x), int(y)))
 
-
+        # voice_command =
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
             return json.dumps({
                 'success': True,

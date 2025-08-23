@@ -28,6 +28,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
@@ -40,7 +41,7 @@ class CalibrateCameraFragment : Fragment() {
     private var captureRunnable: Runnable? = null
 
     // Segundos para tomar la imagen
-    private val CAPTURE_INTERVAL = 1000L // 1 seconds
+    private val CAPTURE_INTERVAL = 900L // 1 seconds
 
     private var shouldCaptureFrame = false
 
@@ -65,6 +66,7 @@ class CalibrateCameraFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        (activity as? MainActivity)?.enableFullscreen()
 
         previewView = view.findViewById(R.id.previewView)
 
@@ -106,7 +108,7 @@ class CalibrateCameraFragment : Fragment() {
 
             // Preview
             val preview = Preview.Builder().build().also {
-                previewView.scaleType = PreviewView.ScaleType.FILL_START  // <-- add this line
+                previewView.scaleType = PreviewView.ScaleType.FILL_START
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -162,6 +164,7 @@ class CalibrateCameraFragment : Fragment() {
     private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<Boolean, List<Pair<Int, Int>>?> {
         val image = imageProxy.image ?: return Pair(false, null)
         try {
+            val pianoAreaSection = requireView().findViewById<FrameLayout>(R.id.drawingContainer)
             val yBuffer = image.planes[0].buffer // Y
             val vuBuffer = image.planes[2].buffer // VU
 
@@ -178,13 +181,21 @@ class CalibrateCameraFragment : Fragment() {
             // se hace un resize a 450px establecido por la constante RESIZE_WIDTH en calibracion.py
             val scalingRatio = previewView.width / 450f
 
+            // Utilizamos regla de 3 para obtener la altura real del previewView, conocemos su ancho y las medidas
+            // Resultantes del frame capturado (ancho y alto) que es la variable <image>
+            val phonePreviewTotalHeight = (previewView.width * image.height) / image.width.toFloat()
+            // Con la altura total de la preview (La cual no se evidencia con totalidad en pantalla
+            // Debido a como android ajusta la imagen a la pantalla), podemos obtener el porcentaje
+            // Que corresponde al area del piano.
+            val frameCapturedPianoAreaPercentage = pianoAreaSection.height / phonePreviewTotalHeight
+
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 90, out)
             val imageBytes = out.toByteArray()
 
             val py = Python.getInstance()
             val module = py.getModule("calibracion")
-            val rsp = module.callAttr("is_calibrated", imageBytes).toString() // Get JSON string
+            val rsp = module.callAttr("is_calibrated", imageBytes, frameCapturedPianoAreaPercentage).toString() // Get JSON string
 
             val json = JSONObject(rsp)
             val success = json.getBoolean("success")
@@ -290,5 +301,8 @@ class CalibrateCameraFragment : Fragment() {
         stopAutomaticCapture()
         stopCamera()
     }
+
+
+
 }
 
