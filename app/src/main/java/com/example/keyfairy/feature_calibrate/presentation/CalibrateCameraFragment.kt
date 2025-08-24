@@ -59,7 +59,7 @@ class CalibrateCameraFragment : Fragment() {
 
     // Variables reproduccion de audio
     private lateinit var soundPool: SoundPool
-    private var soundId: Int = 0
+    private val soundIds = mutableMapOf<String, Int>()
 
 
     override fun onCreateView(
@@ -77,6 +77,8 @@ class CalibrateCameraFragment : Fragment() {
 
         // SoundPool encargado de ejecutar sonidos cortos
         soundPool = SoundPool.Builder().setMaxStreams(1).build()
+        // Preload all sounds after the view is created
+        preloadSounds()
 
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(requireContext()))
@@ -128,18 +130,25 @@ class CalibrateCameraFragment : Fragment() {
 
             imageAnalysis?.setAnalyzer(cameraExecutor) { imageProxy ->
                 if (shouldCaptureFrame) {
-                    val (success, corners) = imageProxyToCalibrationResult(imageProxy)
+                    val (command, corners) = imageProxyToCalibrationResult(imageProxy)
                     view?.post {
-                        if (success && corners != null) {
+                        if (command == "Calibrated" && corners != null) {
                             Log.i("ATENCION", "CALIBRATION SUCCESS - IMAGE PROCESSED")
                             drawCornersOnOverlay(corners, true)
+//                            ("-*-*-*-*-*-*-*-*Logica para continuar a la siguiente pantalla una vez la calibracion sea correcta")
                         }
-                        else if (!success && corners != null) {
+                        else if (command == "notCalibrated" && corners != null) {
                             drawCornersOnOverlay(corners, false)
                         }
-                        else {
-                            Log.i("ATENCION", "CALIBRATION FAILED - IMAGE NOT CALIBRATED")
-                            drawCornersOnOverlay(emptyList(), false) // Optionally clear overlay
+                        else if (corners != null){
+                            Log.i("PLAYER", command)
+                            drawCornersOnOverlay(corners, false)
+                            when (command) {
+                                "izquierda" -> playSound("izquierda")
+                                "derecha" -> playSound("derecha")
+                                "adelante" -> playSound("adelante")
+                                "atras" -> playSound("atras")
+                            }
                         }
                     }
                     shouldCaptureFrame = false
@@ -169,8 +178,8 @@ class CalibrateCameraFragment : Fragment() {
         captureHandler?.postDelayed(captureRunnable!!, CAPTURE_INTERVAL)
     }
 
-    private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<Boolean, List<Pair<Int, Int>>?> {
-        val image = imageProxy.image ?: return Pair(false, null)
+    private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<String, List<Pair<Int, Int>>?> {
+        val image = imageProxy.image ?: return Pair("notCalibrated", null)
         try {
             val pianoAreaSection = requireView().findViewById<FrameLayout>(R.id.drawingContainer)
             val yBuffer = image.planes[0].buffer // Y
@@ -206,7 +215,7 @@ class CalibrateCameraFragment : Fragment() {
             val rsp = module.callAttr("is_calibrated", imageBytes, frameCapturedPianoAreaPercentage).toString() // Get JSON string
 
             val json = JSONObject(rsp)
-            val success = json.getBoolean("success")
+            val command = json.getString("command")
             val cornersJson = json.optJSONArray("corners")
             val corners = cornersJson?.let { arr ->
                 (0 until arr.length()).mapNotNull { i ->
@@ -220,10 +229,10 @@ class CalibrateCameraFragment : Fragment() {
                     } else null
                 }
             }
-            return Pair(success, corners)
+            return Pair(command, corners)
         } catch (e: Exception) {
             Log.e("ImageProcessing", "Error processing image: ${e.message}")
-            return Pair(false, null)
+            return Pair("notCalibrated", null)
         }
     }
 
@@ -254,11 +263,24 @@ class CalibrateCameraFragment : Fragment() {
     }
 
     // -*-*-*-*-*-*-*-*Funciones para la ejecucion de audio-*-*-*-*-*-*-*-*-*-*-*-*
-    fun loadSound(resId: Int) {
-        soundId = soundPool.load(requireContext(), resId, 1)
+    fun loadSound(resId: Int): Int {
+        return soundPool.load(requireContext(), resId, 1)
     }
-    fun playSound() {
-        soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
+    fun playSound(command: String) {
+        soundIds[command]?.let { soundId ->
+            soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
+            Log.i("PLAYER", "Playing sound for: $command")
+        } ?: run {
+            Log.w("PLAYER", "Sound not found for command: $command")
+        }
+    }
+    private fun preloadSounds() {
+        soundIds["izquierda"] = loadSound(R.raw.izquierdacalibrationsound)
+        soundIds["derecha"] = loadSound(R.raw.derechacalibrationsound)
+        soundIds["adelante"] = loadSound(R.raw.adelantecalibrationsound)
+        soundIds["atras"] = loadSound(R.raw.atrascalibrationsound)
+
+        Log.i("PLAYER", "All calibration sounds preloaded")
     }
     // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 

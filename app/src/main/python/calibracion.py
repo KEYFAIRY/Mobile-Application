@@ -4,8 +4,8 @@ import json
 
 RESIZE_WIDTH = 450
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
-PIANO_AREA_XSECTION_OFFSET = 20
-PIANO_AREA_YSECTION_OFFSET = 8
+PIANO_AREA_XSECTION_OFFSET = 18
+PIANO_AREA_YSECTION_OFFSET = 15
 RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 # Define el porcentaje de la imagen original que corresponde al piano para su recorte
 
@@ -54,7 +54,7 @@ def is_calibrated(byte_array_image, piano_area_percentage):
             return "atras"
 
 
-        return None
+        return "notCalibrated"
 
     def is_piano_inside_area(corners):
         for corner in corners:
@@ -170,27 +170,26 @@ def is_calibrated(byte_array_image, piano_area_percentage):
 
     if corners_st is not None:
 
-        print(instruction_command(corners_st, new_height))
 
         compressed_dimensions_corners = []
         for corner in corners_st:
             x, y = corner.ravel()
             compressed_dimensions_corners.append((int(x), int(y)))
 
-        # voice_command =
+        voice_command = instruction_command(corners_st, new_height)
         if is_piano_straight(corners_st) and is_piano_inside_area(corners_st):
             return json.dumps({
-                'success': True,
+                'command': voice_command,
                 'corners': compressed_dimensions_corners
             })
         else:
             return json.dumps({
-                'success': False,
+                'command': voice_command,
                 'corners': compressed_dimensions_corners
             })
     else:
         return json.dumps({
-            'success': False,
+            'command': "notCalibrated",
             'corners': None
         })
 
