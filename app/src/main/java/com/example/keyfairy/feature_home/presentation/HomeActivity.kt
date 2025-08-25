@@ -6,16 +6,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModelProvider
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.ActivityHomeBinding
 import com.example.keyfairy.feature_home.presentation.HomeFragment
 import com.example.keyfairy.feature_progress.presentation.ProgressFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
+import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
 import com.example.keyfairy.feature_profile.presentation.ProfileFragment
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
+    private lateinit var practiceViewModel: PracticeViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,6 +26,9 @@ class HomeActivity : AppCompatActivity() {
 
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        practiceViewModel = ViewModelProvider(this)[PracticeViewModel::class.java]
+        practiceViewModel.cargarEscalas(this)
 
         // Aplicar insets solo arriba (status bar), no abajo
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->

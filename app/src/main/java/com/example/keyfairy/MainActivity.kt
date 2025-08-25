@@ -12,14 +12,11 @@ import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var practiceViewModel: PracticeViewModel
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        practiceViewModel = ViewModelProvider(this)[PracticeViewModel::class.java]
-        practiceViewModel.cargarEscalas(this)
 
         // Simulación de "splash" con 3 segundos de carga
         Handler(Looper.getMainLooper()).postDelayed({
