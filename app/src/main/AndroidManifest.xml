@@ -5,6 +5,7 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
@@ -16,6 +17,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Keyfairy">
+        <activity
+            android:name=".feature_home.presentation.HomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_auth.presentation.AuthActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.ImageView
 import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -49,7 +50,7 @@ class CalibrateFragment : Fragment() {
 
         // Example: set click listener
         continueButton.setOnClickListener {
-            (activity as? MainActivity)?.replaceFragment(CalibrateCameraFragment(), true)
+            (activity as? HomeActivity)?.replaceFragment(CalibrateCameraFragment())
         }
     }
 

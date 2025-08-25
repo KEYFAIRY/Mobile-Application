@@ -1,15 +1,14 @@
-package com.example.keyfairy.feature_auth.presentation.login
+package com.example.keyfairy.feature_auth.presentation
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentLoginBinding
-import com.example.keyfairy.feature_auth.presentation.sign_up.Sign_upFragment
-import com.example.keyfairy.feature_home.presentation.HomeFragment
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 
 class LoginFragment : Fragment() {
 
@@ -17,7 +16,8 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
@@ -27,19 +27,21 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Botón de Login -> abre ActivityHome
+        binding.btnLogin.setOnClickListener {
+            val intent = Intent(requireContext(), HomeActivity::class.java)
+            startActivity(intent)
+            requireActivity().finish() // opcional: cerrar AuthActivity
+        }
 
-        (activity as? MainActivity)?.setBottomNavVisibility(false)
-
+        // Texto de "¿No tienes cuenta?" -> carga SignUpFragment
         binding.tvRegisterLink.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, Sign_upFragment())
+                .replace(R.id.fragment_container, SignUpFragment())
                 .addToBackStack(null)
                 .commit()
         }
 
-        binding.btnLogin.setOnClickListener {
-            (activity as? MainActivity)?.replaceFragment(HomeFragment(), true)
-        }
     }
 
     override fun onDestroyView() {

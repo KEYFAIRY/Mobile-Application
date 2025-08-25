@@ -6,93 +6,106 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:background="#F5F5F5"
+    android:background="@color/white"
     android:padding="24dp"
-    tools:context=".feature_auth.presentation.login.LoginFragment">
+    tools:context=".feature_auth.presentation.LoginFragment">
 
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <ImageView
-        android:id="@+id/logo_placeholder"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:src="@drawable/keyfairy_logo"
-        android:layout_marginBottom="48dp"/>
-
-    <TextView
-        android:id="@+id/welcome_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Bienvenid@ a Keyfairy"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/black"
-        android:layout_marginBottom="48dp"/>
-
-    <TextView
-        android:id="@+id/label_email"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Correo"
-        android:textSize="16sp"
-        android:textColor="@android:color/black"
-        android:layout_marginBottom="8dp"/>
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/et_email"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/rounded_edittext_background"
-        android:padding="16dp"
-        android:inputType="textEmailAddress"
-        android:layout_marginBottom="24dp"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/label_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Contraseña"
-        android:textSize="16sp"
-        android:textColor="@android:color/black"
-        android:layout_marginBottom="8dp"/>
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/et_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/rounded_edittext_background"
-        android:padding="16dp"
-        android:inputType="textPassword"
-        android:layout_marginBottom="32dp"/>
+            <ImageView
+                android:id="@+id/logo_placeholder"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:src="@drawable/keyfairy_logo"
+                android:layout_marginBottom="48dp"/>
 
-    <Button
-        android:id="@+id/btn_login"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Iniciar sesión"
-        android:background="@drawable/rounded_button_background"
-        app:backgroundTint="@color/light_blue"
-        android:textColor="@color/dark_blue" />
+            <TextView
+                android:id="@+id/welcome_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bienvenid@ a Keyfairy"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="48dp"/>
 
-    <TextView
-        android:id="@+id/tv_register_link"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="¿No tienes cuenta? ¡Créate una!"
-        android:textColor="@color/dark_blue"
-        android:textSize="14sp"
-        android:layout_marginTop="16dp"
-        android:textStyle="bold"
-        android:clickable="true"
-        android:focusable="true"
-        android:layout_gravity="center_horizontal"/>
+            <TextView
+                android:id="@+id/label_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Correo"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp"/>
 
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext_background"
+                android:padding="16dp"
+                android:inputType="textEmailAddress"
+                android:layout_marginBottom="24dp"/>
 
+            <TextView
+                android:id="@+id/label_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Contraseña"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext_background"
+                android:padding="16dp"
+                android:inputType="textPassword"
+                android:layout_marginBottom="32dp"/>
+
+            <Button
+                android:id="@+id/btn_login"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Iniciar sesión"
+                android:background="@drawable/rounded_button_background"
+                app:backgroundTint="@color/light_blue"
+                android:textColor="@color/dark_blue" />
+
+            <TextView
+                android:id="@+id/tv_register_link"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="¿No tienes cuenta? ¡Créate una!"
+                android:textColor="@color/dark_blue"
+                android:textSize="14sp"
+                android:layout_marginTop="16dp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_gravity="center_horizontal"/>
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

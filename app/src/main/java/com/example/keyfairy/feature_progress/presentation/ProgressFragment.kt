@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentProgressBinding
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 import com.example.keyfairy.feature_reports.presentation.ReportsFragment
 
 
@@ -28,7 +29,7 @@ class ProgressFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.reportsButton.setOnClickListener {
-            (activity as? MainActivity)?.replaceFragment(ReportsFragment(), true)
+            (activity as? HomeActivity)?.replaceFragment(ReportsFragment())
         }
     }
 

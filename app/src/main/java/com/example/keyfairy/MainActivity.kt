@@ -1,82 +1,39 @@
 package com.example.keyfairy
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import androidx.activity.enableEdgeToEdge
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.example.keyfairy.feature_auth.presentation.login.LoginFragment
-import com.example.keyfairy.feature_home.presentation.HomeFragment
-import com.example.keyfairy.feature_progress.presentation.ProgressFragment
-import com.example.keyfairy.feature_practice.presentation.PracticeFragment
+import com.example.keyfairy.feature_auth.presentation.AuthActivity
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
-import com.example.keyfairy.feature_profile.presentation.ProfileFragment
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.lifecycle.ViewModelProvider
-
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var bottomNavigationView: BottomNavigationView
     private lateinit var practiceViewModel: PracticeViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-
-        bottomNavigationView = findViewById(R.id.bottom_navigation_view)
-        bottomNavigationView.visibility = View.GONE // Oculta barra al inicio
 
         practiceViewModel = ViewModelProvider(this)[PracticeViewModel::class.java]
         practiceViewModel.cargarEscalas(this)
 
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, LoginFragment())
-                .commit()
-        }
+        // Simulación de "splash" con 3 segundos de carga
+        Handler(Looper.getMainLooper()).postDelayed({
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+            val isLoggedIn = false // aquí luego pondrás la lógica real
 
-        bottomNavigationView.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navigation_progress -> {
-                    replaceFragment(ProgressFragment(), true)
-                    true
-                }
-                R.id.navigation_practice -> {
-                    replaceFragment(PracticeFragment(), true)
-                    true
-                }
-                R.id.navigation_home -> {
-                    replaceFragment(HomeFragment(), true)
-                    true
-                }
-                R.id.navigation_profile -> {
-                    replaceFragment(ProfileFragment(), true)
-                    true
-                }
-                else -> false
+            if (isLoggedIn) {
+                startActivity(Intent(this, HomeActivity::class.java))
+            } else {
+                startActivity(Intent(this, AuthActivity::class.java))
             }
-        }
-    }
 
-    fun replaceFragment(fragment: Fragment, showBottomNav: Boolean) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
+            finish() // cierra MainActivity
 
-        bottomNavigationView.visibility = if (showBottomNav) View.VISIBLE else View.GONE
-    }
-
-    fun setBottomNavVisibility(isVisible: Boolean) {
-        bottomNavigationView.visibility = if (isVisible) View.VISIBLE else View.GONE
+        }, 3000) // 3 segundos
     }
 }

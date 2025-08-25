@@ -10,6 +10,7 @@ import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentSpeedAndDistanceBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateFragment
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 
 class SpeedAndDistanceFragment : Fragment() {
 
@@ -46,7 +47,7 @@ class SpeedAndDistanceFragment : Fragment() {
         binding.spinnerNota.adapter = adapterNota
 
         binding.buttonIniciarCalibracion.setOnClickListener {
-            (activity as? MainActivity)?.replaceFragment(CalibrateFragment(), true)
+            (activity as? HomeActivity)?.replaceFragment(CalibrateFragment())
         }
 
         return binding.root

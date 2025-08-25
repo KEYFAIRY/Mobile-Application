@@ -3,17 +3,17 @@
     <item
         android:id="@+id/navigation_progress"
         android:icon="@drawable/statistics_red"
-        android:title="Progreso" />
+        android:title="" />
     <item
         android:id="@+id/navigation_practice"
         android:icon="@drawable/music_note_red"
-        android:title="Practicar" />
+        android:title="" />
     <item
         android:id="@+id/navigation_home"
         android:icon="@drawable/home_red"
-        android:title="Inicio" />
+        android:title="" />
     <item
         android:id="@+id/navigation_profile"
         android:icon="@drawable/profile_red"
-        android:title="Perfil" />
+        android:title="" />
 </menu>
