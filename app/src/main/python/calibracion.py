@@ -2,16 +2,20 @@ import cv2
 import numpy as np
 import json
 
-RESIZE_WIDTH = 450
+RESIZE_WIDTH = 600
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
-PIANO_AREA_XSECTION_OFFSET = 18
-PIANO_AREA_YSECTION_OFFSET = 15
+PIANO_AREA_XSECTION_OFFSET = int(RESIZE_WIDTH * 0.03)
+PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.025)
 RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
-# Define el porcentaje de la imagen original que corresponde al piano para su recorte
+# Distancia aproximada que realiza el usuario cada vez que hace una correccion
+MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.025)
+
 
 def is_calibrated(byte_array_image, piano_area_percentage):
 
     def instruction_command(corners, image_height):
+        # Rango de tolerancia que determina si el piano esta recto o no.
+        straight_inferior_corners_tolerance = int(image_height * 0.08)
         bottom_side_limit = image_height - PIANO_AREA_YSECTION_OFFSET
         corner_xy_tuples = []
         for corner in corners:
@@ -37,17 +41,37 @@ def is_calibrated(byte_array_image, piano_area_percentage):
             right_side_upper_corner = corner_xy_tuples[3]
             right_side_lower_corner = corner_xy_tuples[2]
 
-        # REVISION DE LA DIFERENCIA DEL PUNTO SALIDO SUMADO AL OTRO PUNTO INDICA SALIDA TAMBIEN RETORNAR ARRIBA
-
+        # Revision de rectitud del piano (Las dos esquinas inferiores deben estar a +- la misma altura Y)
+        print(f"TOLERANCIA: {straight_inferior_corners_tolerance}")
+        print(f"DIFFY: {left_side_lower_corner[1] - right_side_lower_corner[1]}")
         print(f"LU: {left_side_upper_corner}")
         print(f"LL: {left_side_lower_corner}")
         print(f"RU: {right_side_upper_corner}")
         print(f"RL: {right_side_lower_corner}")
 
+        if np.absolute(left_side_lower_corner[1] - right_side_lower_corner[1]) > straight_inferior_corners_tolerance:
+            # Si esquina inferior izq esta mas abajo que la derecha
+            if left_side_lower_corner[1] > right_side_lower_corner[1]:
+                return "r_izquierda"
+            else:
+                return "r_derecha"
+
+
+
+
+
+
         if left_side_upper_corner[0] <= PIANO_AREA_XSECTION_OFFSET or left_side_lower_corner[0] <= PIANO_AREA_XSECTION_OFFSET:
-            return "izquierda"
+            # Si al mover hacia la izquierda, los demas puntos se salen, subir dispositivo
+            if right_side_upper_corner[0] + MOVEMENT_CORRECTION_DISTANCE >= RIGHT_SIDE_LIMIT or right_side_lower_corner[0] + MOVEMENT_CORRECTION_DISTANCE >= RIGHT_SIDE_LIMIT:
+                return "arriba"
+            else:
+                return "izquierda"
         if right_side_upper_corner[0] >= RIGHT_SIDE_LIMIT or right_side_lower_corner[0] >= RIGHT_SIDE_LIMIT:
-            return "derecha"
+            if left_side_upper_corner[0] - MOVEMENT_CORRECTION_DISTANCE <= PIANO_AREA_XSECTION_OFFSET or left_side_lower_corner[0] - MOVEMENT_CORRECTION_DISTANCE <= PIANO_AREA_XSECTION_OFFSET:
+                return "arriba"
+            else:
+                return "derecha"
         if left_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET or right_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET:
             return "adelante"
         if left_side_lower_corner[1] >= bottom_side_limit or right_side_lower_corner[1] >= bottom_side_limit:

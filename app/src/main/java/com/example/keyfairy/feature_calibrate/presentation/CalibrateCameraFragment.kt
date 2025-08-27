@@ -31,6 +31,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
+import com.example.keyfairy.feature_home.presentation.HomeActivity
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -71,7 +72,8 @@ class CalibrateCameraFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        (activity as? MainActivity)?.enableFullscreen()
+        (activity as? HomeActivity)?.enableFullscreen()
+        (activity as? HomeActivity)?.hideBottomNavigation()
 
         previewView = view.findViewById(R.id.previewView)
 
@@ -144,10 +146,13 @@ class CalibrateCameraFragment : Fragment() {
                             Log.i("PLAYER", command)
                             drawCornersOnOverlay(corners, false)
                             when (command) {
+                                "arriba" -> playSound("arriba")
                                 "izquierda" -> playSound("izquierda")
                                 "derecha" -> playSound("derecha")
                                 "adelante" -> playSound("adelante")
                                 "atras" -> playSound("atras")
+                                "r_derecha" -> playSound("r_derecha")
+                                "r_izquierda" -> playSound("r_izquierda")
                             }
                         }
                     }
@@ -196,7 +201,7 @@ class CalibrateCameraFragment : Fragment() {
 
             // Se divide entre 450 debido a que es la medida a la que se ajusta la imagen en python
             // se hace un resize a 450px establecido por la constante RESIZE_WIDTH en calibracion.py
-            val scalingRatio = previewView.width / 450f
+            val scalingRatio = previewView.width / 600f
 
             // Utilizamos regla de 3 para obtener la altura real del previewView, conocemos su ancho y las medidas
             // Resultantes del frame capturado (ancho y alto) que es la variable <image>
@@ -275,10 +280,13 @@ class CalibrateCameraFragment : Fragment() {
         }
     }
     private fun preloadSounds() {
+        soundIds["arriba"] = loadSound(R.raw.arribacalibrationsound)
         soundIds["izquierda"] = loadSound(R.raw.izquierdacalibrationsound)
         soundIds["derecha"] = loadSound(R.raw.derechacalibrationsound)
         soundIds["adelante"] = loadSound(R.raw.adelantecalibrationsound)
         soundIds["atras"] = loadSound(R.raw.atrascalibrationsound)
+        soundIds["r_derecha"] = loadSound(R.raw.rotaderechacalibrationsound)
+        soundIds["r_izquierda"] = loadSound(R.raw.rotaizquierdacalibrationsound)
 
         Log.i("PLAYER", "All calibration sounds preloaded")
     }
