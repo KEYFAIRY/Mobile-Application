@@ -43,7 +43,7 @@ class CalibrateCameraFragment : Fragment() {
     private var captureRunnable: Runnable? = null
 
     // Segundos para tomar la imagen
-    private val CAPTURE_INTERVAL = 900L // 1 seconds
+    private val CAPTURE_INTERVAL = 1200L // 1 seconds
 
     private var shouldCaptureFrame = false
 
@@ -153,6 +153,7 @@ class CalibrateCameraFragment : Fragment() {
                                 "atras" -> playSound("atras")
                                 "r_derecha" -> playSound("r_derecha")
                                 "r_izquierda" -> playSound("r_izquierda")
+                                "calibrado" -> playSound("calibrado")
                             }
                         }
                     }
@@ -287,6 +288,7 @@ class CalibrateCameraFragment : Fragment() {
         soundIds["atras"] = loadSound(R.raw.atrascalibrationsound)
         soundIds["r_derecha"] = loadSound(R.raw.rotaderechacalibrationsound)
         soundIds["r_izquierda"] = loadSound(R.raw.rotaizquierdacalibrationsound)
+        soundIds["calibrado"] = loadSound(R.raw.calibradocalibrationsound)
 
         Log.i("PLAYER", "All calibration sounds preloaded")
     }

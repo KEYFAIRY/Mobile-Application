@@ -78,7 +78,7 @@ def is_calibrated(byte_array_image, piano_area_percentage):
             return "atras"
 
 
-        return "notCalibrated"
+        return "calibrado"
 
     def is_piano_inside_area(corners):
         for corner in corners:
