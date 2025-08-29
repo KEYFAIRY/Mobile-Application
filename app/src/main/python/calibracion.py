@@ -15,7 +15,7 @@ def is_calibrated(byte_array_image, piano_area_percentage):
 
     def instruction_command(corners, image_height):
         # Rango de tolerancia que determina si el piano esta recto o no.
-        straight_inferior_corners_tolerance = int(image_height * 0.08)
+        straight_inferior_corners_tolerance = int(image_height * 0.1)
         bottom_side_limit = image_height - PIANO_AREA_YSECTION_OFFSET
         corner_xy_tuples = []
         for corner in corners:
@@ -49,14 +49,6 @@ def is_calibrated(byte_array_image, piano_area_percentage):
         print(f"RU: {right_side_upper_corner}")
         print(f"RL: {right_side_lower_corner}")
 
-        if np.absolute(left_side_lower_corner[1] - right_side_lower_corner[1]) > straight_inferior_corners_tolerance:
-            # Si esquina inferior izq esta mas abajo que la derecha
-            if left_side_lower_corner[1] > right_side_lower_corner[1]:
-                return "r_izquierda"
-            else:
-                return "r_derecha"
-
-
 
 
 
@@ -72,6 +64,14 @@ def is_calibrated(byte_array_image, piano_area_percentage):
                 return "arriba"
             else:
                 return "derecha"
+
+        if np.absolute(left_side_lower_corner[1] - right_side_lower_corner[1]) > straight_inferior_corners_tolerance:
+            # Si esquina inferior izq esta mas abajo que la derecha
+            if left_side_lower_corner[1] > right_side_lower_corner[1]:
+                return "r_izquierda"
+            else:
+                return "r_derecha"
+
         if left_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET or right_side_upper_corner[1] <= PIANO_AREA_YSECTION_OFFSET:
             return "adelante"
         if left_side_lower_corner[1] >= bottom_side_limit or right_side_lower_corner[1] >= bottom_side_limit:
