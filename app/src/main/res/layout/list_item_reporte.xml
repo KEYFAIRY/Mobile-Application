@@ -1,0 +1,65 @@
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Icono de práctica -->
+        <ImageView
+            android:id="@+id/practice_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/pdf_blue"
+            android:contentDescription="Icono práctica" />
+
+        <!-- Información de la práctica -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+
+            <TextView
+                android:id="@+id/text_nombre_escala"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nombre de la práctica"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_notas"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:text="Notas: Do, Re, Mi, Fa, Sol, La, Si" />
+
+            <TextView
+                android:id="@+id/text_fecha"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:text="Fecha: 12 de mayo 5 pm" />
+        </LinearLayout>
+
+        <!-- Botón de acción -->
+        <Button
+            android:id="@+id/button_ver_detalle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ver"
+            android:minWidth="72dp" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

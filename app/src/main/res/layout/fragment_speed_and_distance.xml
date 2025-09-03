@@ -98,7 +98,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Nota en la cual realizará la escala"
+            android:text="Figura musical en la cual realizará la escala"
             android:textStyle="bold"
             android:paddingBottom="4dp" />
 
@@ -108,7 +108,7 @@
             android:background="@android:color/darker_gray" />
 
         <Spinner
-                android:id="@+id/spinner_nota"
+            android:id="@+id/spinner_nota"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
@@ -28,7 +29,9 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
+import com.example.keyfairy.feature_practice.presentation.LoadingFragment
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -67,6 +70,12 @@ class CalibrateCameraFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         previewView = view.findViewById(R.id.previewView)
+        val continueButton: Button = view.findViewById(R.id.button_continue)
+
+        continueButton.setOnClickListener {
+            (activity as? MainActivity)?.replaceFragment(LoadingFragment(), true)
+        }
+
 
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(requireContext()))
