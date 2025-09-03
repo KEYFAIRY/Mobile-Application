@@ -1,5 +1,6 @@
 package com.example.keyfairy.feature_calibrate.presentation
 
+import YOLO11Segmentation
 import android.Manifest
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -29,7 +30,6 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
-import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
 import com.example.keyfairy.feature_home.presentation.HomeActivity
 import java.io.ByteArrayOutputStream
@@ -43,7 +43,7 @@ class CalibrateCameraFragment : Fragment() {
     private var captureRunnable: Runnable? = null
 
     // Segundos para tomar la imagen
-    private val CAPTURE_INTERVAL = 1200L // 1 seconds
+    private val CAPTURE_INTERVAL = 4000L // 1 seconds
 
     private var shouldCaptureFrame = false
 
@@ -218,7 +218,12 @@ class CalibrateCameraFragment : Fragment() {
 
             val py = Python.getInstance()
             val module = py.getModule("calibracion")
-            val rsp = module.callAttr("is_calibrated", imageBytes, frameCapturedPianoAreaPercentage).toString() // Get JSON string
+
+            val segmentation = YOLO11Segmentation(requireContext())
+            val resultBitmap = segmentation.getPianoKeysFromImage(imageBytes)
+//            print(resultBitmap)
+
+            val rsp = module.callAttr("is_calibrated", resultBitmap, frameCapturedPianoAreaPercentage, context).toString() // Get JSON string
 
             val json = JSONObject(rsp)
             val command = json.getString("command")

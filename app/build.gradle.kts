@@ -50,7 +50,6 @@ chaquopy {
         pip {
             install("numpy")
             install("music21 == 8.3.0")
-//            install("opencv-python-headless==4.5.3.56")
             install("opencv-python-headless==4.5.1.48")
 
         }
@@ -70,6 +69,10 @@ dependencies {
 
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+
+    //Dependencias ejecutar el modelo
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.5.0")
 
 
     // Dependencias CameraX

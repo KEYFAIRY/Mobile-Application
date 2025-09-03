@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import json
+import os
 
-RESIZE_WIDTH = 600
+RESIZE_WIDTH = 608
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
 PIANO_AREA_XSECTION_OFFSET = int(RESIZE_WIDTH * 0.03)
 PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.025)
@@ -11,7 +12,7 @@ RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.025)
 
 
-def is_calibrated(byte_array_image, piano_area_percentage):
+def is_calibrated(byte_array_image, piano_area_percentage, context):
 
     def instruction_command(corners, image_height):
         # Rango de tolerancia que determina si el piano esta recto o no.
@@ -127,13 +128,26 @@ def is_calibrated(byte_array_image, piano_area_percentage):
     nparr = np.frombuffer(byte_array_image, np.uint8)
 
     # cv2.imdecode leer la imagen del Numpy array
-    raw_frame = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
-    # Get image dimensions
-    original_height, original_width = raw_frame.shape
+    raw_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+
+
+    files_dir = str(context.getFilesDir())
+
+    # Define image file path
+    img_path = os.path.join(files_dir, "my_image.jpg")
+
+    # Save image to the path
+    cv2.imwrite(img_path, raw_frame)
+
+    return
+
+# Get image dimensions
+    original_height, original_width = raw_frame.shape[:2]
 
     # Calculate the number of pixels to keep
     keep_height = int(original_height * piano_area_percentage)
-    # Crop from top (remove 40% from top)
+    # Crop from top (remove piano_area_percentage% from top)
     cropped_frame = raw_frame[:keep_height, :]
 
     original_height, original_width = cropped_frame.shape[:2]
@@ -143,46 +157,63 @@ def is_calibrated(byte_array_image, piano_area_percentage):
 
     img = cv2.resize(cropped_frame, (RESIZE_WIDTH, new_height))
 
+    if new_height < RESIZE_WIDTH:
+        pad_height = RESIZE_WIDTH - new_height
+        img = cv2.copyMakeBorder(
+            img,
+            top=0,
+            bottom=pad_height,
+            left=0,
+            right=0,
+            borderType=cv2.BORDER_CONSTANT,
+            value=0  # Black padding
+        )
+
+
     # Aplicar Gaussian Blur para reducir ruido de la imagen
-    blur = cv2.bilateralFilter(img,9,50,100)
+    # blur = cv2.bilateralFilter(img,9,50,100)
+    #
+    # # Modifica contraste y brillo
+    # alpha = 1.3  # Increase contrast (make whites whiter, blacks blacker)
+    # beta = 1.2    # Increase brightness (shift all pixels up)
+    # bright_contrast_image = cv2.convertScaleAbs(blur, alpha=alpha, beta=beta)
+    #
+    # # Equilibra el brillo de la foto
+    # # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    # clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(4,4))
+    # clahe_img = clahe.apply(bright_contrast_image)
+    # # Threshold permite indicar un colo minimo de pixel que se convertira a blanco, el reston negro
+    # _, thresh = cv2.threshold(clahe_img, 176, 255, cv2.THRESH_TOZERO)
+    #
+    # # Aplicar algoritmo de deteccion de bordes canny
+    # edges = cv2.Canny(thresh, threshold1=140, threshold2=350)
+    #
+    # # Dilatacion para hacer mas gruesos los bordes de Canny porque son muy delgados
+    # kernel = np.ones((3,3), np.uint8)
+    # dilated_edges = cv2.dilate(edges, kernel, iterations=1)
+    #
+    # # Hallamos contorno de la imagen, notese que no es lo mismo que la deteccion de bordes
+    # contours, hierarchy = cv2.findContours(dilated_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # c = max(contours, key=cv2.contourArea)
+    #
+    # # Con el contorno aproximado de la imagen, aplicamos un cascaron que ignore las irregularidades
+    # # y obtener de esta manera un rectangulo
+    # # Calcular Convex Hull
+    # hull = cv2.convexHull(c)
+    #
+    # # Se crea un lienzo negro
+    # drawing = np.zeros((thresh.shape[0], thresh.shape[1]), np.uint8)
+    #
+    # # Definimos colores para dibujar sobre el lienzo
+    # color_hull = (255, 255, 255) # blanco
+    #
+    # # Se dibuja el cascaron (Hull)
+    # cv2.drawContours(drawing, [hull], -1, color_hull, 1, 8)
 
-    # Modifica contraste y brillo
-    alpha = 1.3  # Increase contrast (make whites whiter, blacks blacker)
-    beta = 1.2    # Increase brightness (shift all pixels up)
-    bright_contrast_image = cv2.convertScaleAbs(blur, alpha=alpha, beta=beta)
+    # drawing = ypkd.get_piano_keys_from_yolo_model(context, img)
 
-    # Equilibra el brillo de la foto
-    # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(4,4))
-    clahe_img = clahe.apply(bright_contrast_image)
-    # Threshold permite indicar un colo minimo de pixel que se convertira a blanco, el reston negro
-    _, thresh = cv2.threshold(clahe_img, 176, 255, cv2.THRESH_TOZERO)
 
-    # Aplicar algoritmo de deteccion de bordes canny
-    edges = cv2.Canny(thresh, threshold1=140, threshold2=350)
-
-    # Dilatacion para hacer mas gruesos los bordes de Canny porque son muy delgados
-    kernel = np.ones((3,3), np.uint8)
-    dilated_edges = cv2.dilate(edges, kernel, iterations=1)
-
-    # Hallamos contorno de la imagen, notese que no es lo mismo que la deteccion de bordes
-    contours, hierarchy = cv2.findContours(dilated_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    c = max(contours, key=cv2.contourArea)
-
-    # Con el contorno aproximado de la imagen, aplicamos un cascaron que ignore las irregularidades
-    # y obtener de esta manera un rectangulo
-    # Calcular Convex Hull
-    hull = cv2.convexHull(c)
-
-    # Se crea un lienzo negro
-    drawing = np.zeros((thresh.shape[0], thresh.shape[1]), np.uint8)
-
-    # Definimos colores para dibujar sobre el lienzo
-    color_hull = (255, 255, 255) # blanco
-
-    # Se dibuja el cascaron (Hull)
-    cv2.drawContours(drawing, [hull], -1, color_hull, 1, 8)
-
+    return
     # Se aplica el algoritmo de deteccion de esquinas Shi-Tomasi
     corners_st = cv2.goodFeaturesToTrack(
         drawing,
