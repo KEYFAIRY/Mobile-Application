@@ -143,6 +143,55 @@ class YOLO11Segmentation(private val context: Context) {
         return Pair(inputBuffer, Pair(608, 608))
     }
 
+
+
+
+    private fun preprocessImageTest(bitmap: Bitmap): Bitmap {
+        val originalWidth = bitmap.width
+        val originalHeight = bitmap.height
+
+        println("Original image size: ${originalWidth}x${originalHeight}")
+        println("Target model size: ${modelSize}x${modelSize}")
+
+        // Calculate scaling factor to fit image within target size while maintaining aspect ratio
+        val scale = minOf(
+            modelSize.toFloat() / originalWidth,
+            modelSize.toFloat() / originalHeight
+        )
+
+        // Calculate new dimensions after scaling
+        val scaledWidth = (originalWidth * scale).toInt()
+        val scaledHeight = (originalHeight * scale).toInt()
+
+        println("Scaled dimensions: ${scaledWidth}x${scaledHeight}")
+
+        // First, resize the bitmap maintaining aspect ratio
+        val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight)
+
+        // Create a new bitmap with target size (608x608) and black background
+        val paddedBitmap = createBitmap(modelSize, modelSize)
+        val canvas = Canvas(paddedBitmap)
+
+        // Fill with black background
+        canvas.drawColor(Color.BLACK)
+
+        // Calculate position to center the scaled image
+        val left = (modelSize - scaledWidth) / 2f
+        val top = (modelSize - scaledHeight) / 2f
+
+        println("Padding - left: $left, top: $top")
+
+        // Draw the scaled image centered on the black background
+        canvas.drawBitmap(scaledBitmap, left, top, null)
+
+        println("Padding Dim: ${canvas.width}x${canvas.height}")
+        return paddedBitmap
+    }
+
+
+
+
+
     private fun postprocessSegmentation(
         predictions: TensorBuffer,
         maskPrototypes: TensorBuffer,
@@ -234,22 +283,20 @@ class YOLO11Segmentation(private val context: Context) {
 
         return intersectionArea / (box1Area + box2Area - intersectionArea)
     }
-
     private fun generateMask(
         maskCoeffs: FloatArray,
         maskPrototypes: TensorBuffer,
         originalWidth: Int,
-        originalHeight: Int
+        originalHeight: Int,
+        bbox: FloatArray // [cx, cy, w, h] in normalized format
     ): Bitmap? {
         if (maskCoeffs.isEmpty()) return null
 
-        // maskPrototypes shape: [1, 152, 152, 32]
         val prototypeData = maskPrototypes.floatArray
         val shape = maskPrototypes.shape
-        val maskSize = shape[1] // 152
-        val numMasks = shape[3] // 32
+        val maskSize = shape[1]
+        val numMasks = shape[3]
 
-        // Reshape prototypes: [1, H, W, C] -> [H][W][C]
         val prototypes = Array(maskSize) { Array(maskSize) { FloatArray(numMasks) } }
         var index = 0
         for (h in 0 until maskSize) {
@@ -260,7 +307,6 @@ class YOLO11Segmentation(private val context: Context) {
             }
         }
 
-        // Matrix multiplication: for each [h,w], dot(maskCoeffs, prototypes[h][w])
         val mask = Array(maskSize) { FloatArray(maskSize) { 0f } }
         for (h in 0 until maskSize) {
             for (w in 0 until maskSize) {
@@ -268,25 +314,50 @@ class YOLO11Segmentation(private val context: Context) {
                 for (c in 0 until numMasks) {
                     sum += maskCoeffs[c] * prototypes[h][w][c]
                 }
-                mask[h][w] = 1f / (1f + exp(-sum)) // Sigmoid
+                mask[h][w] = 1f / (1f + exp(-sum))
             }
         }
 
-        // Convert to bitmap: threshold + to ARGB
         val maskBitmap = createBitmap(maskSize, maskSize)
         val pixels = IntArray(maskSize * maskSize)
-        // MODIFIQUE ESTE VALOR AJUSTE
         val threshold = 0.7f
         for (y in 0 until maskSize) {
             for (x in 0 until maskSize) {
                 val value = if (mask[y][x] > threshold) 255 else 0
-                pixels[y * maskSize + x] = Color.argb(128, value, 0, 0) // semi-transparent red
+                pixels[y * maskSize + x] = Color.argb(128, value, 0, 0)
             }
         }
         maskBitmap.setPixels(pixels, 0, maskSize, 0, 0, maskSize, maskSize)
 
-        // Scale to original image size for overlay
-        return maskBitmap.scale(originalWidth, originalHeight)
+        // Scale mask to original image size
+        val scaledMask = maskBitmap.scale(originalWidth, originalHeight)
+
+        // Restrict mask to bounding box
+        val cx = bbox[0] * originalWidth
+        val cy = bbox[1] * originalHeight
+        val w = bbox[2] * originalWidth
+        val h = bbox[3] * originalHeight
+
+        val left = ((cx - w / 2).toInt()).coerceAtLeast(0)
+        val top = ((cy - h / 2).toInt()).coerceAtLeast(0)
+        val right = ((cx + w / 2).toInt()).coerceAtMost(originalWidth - 1)
+        val bottom = ((cy + h / 2).toInt()).coerceAtMost(originalHeight - 1)
+
+        val maskCropped = scaledMask.copy(Bitmap.Config.ARGB_8888, true)
+        val maskPixels = IntArray(originalWidth * originalHeight)
+        maskCropped.getPixels(maskPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
+
+        for (y in 0 until originalHeight) {
+            for (x in 0 until originalWidth) {
+                val idx = y * originalWidth + x
+                if (x < left || x > right || y < top || y > bottom) {
+                    maskPixels[idx] = maskPixels[idx] and 0x00FFFFFF // set alpha to 0
+                }
+            }
+        }
+        maskCropped.setPixels(maskPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
+
+        return maskCropped
     }
 
     fun processImage(bitmap: Bitmap): Bitmap {
@@ -338,7 +409,8 @@ class YOLO11Segmentation(private val context: Context) {
                 bestDetection.maskCoeffs,
                 maskPrototypes,
                 originalWidth,
-                originalHeight
+                originalHeight,
+                bestDetection.bbox
             )
 
             return mask ?: bitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -369,14 +441,16 @@ class YOLO11Segmentation(private val context: Context) {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/90.jpg")
+            val inputStream = assetManager.open("test_images/87.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
             val bitmap = BitmapFactory.decodeByteArray(byteArrayMocked, 0, byteArrayMocked.size)
                 ?: throw Exception("Failed to decode image")
 
+            // DESCOMENTAR PARA RERESAR AL OIGINAL
             val resultBitmap = processImage(bitmap)
+            //val resultBitmap = preprocessImageTest(bitmap)
 
             val stream = java.io.ByteArrayOutputStream()
             resultBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
