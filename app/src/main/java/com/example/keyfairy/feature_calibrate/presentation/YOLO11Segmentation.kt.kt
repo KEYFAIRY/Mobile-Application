@@ -12,6 +12,8 @@ import java.nio.ByteBuffer
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 
 class YOLO11Segmentation(private val context: Context) {
 
@@ -90,10 +92,10 @@ class YOLO11Segmentation(private val context: Context) {
         println("Scaled dimensions: ${scaledWidth}x${scaledHeight}")
 
         // First, resize the bitmap maintaining aspect ratio
-        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+        val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight)
 
         // Create a new bitmap with target size (608x608) and black background
-        val paddedBitmap = Bitmap.createBitmap(modelSize, modelSize, Bitmap.Config.ARGB_8888)
+        val paddedBitmap = createBitmap(modelSize, modelSize)
         val canvas = Canvas(paddedBitmap)
 
         // Fill with black background
@@ -155,7 +157,7 @@ class YOLO11Segmentation(private val context: Context) {
         val numDetections = shape[2] // 7581
         val numChannels = shape[1] // 37
 
-        println("Processing ${numDetections} detections with ${numChannels} channels")
+        println("Processing $numDetections detections with $numChannels channels")
 
         for (i in 0 until numDetections) {
             // YOLOv11 format: cx, cy, w, h, confidence, mask_coeffs[32]
@@ -271,9 +273,10 @@ class YOLO11Segmentation(private val context: Context) {
         }
 
         // Convert to bitmap: threshold + to ARGB
-        val maskBitmap = Bitmap.createBitmap(maskSize, maskSize, Bitmap.Config.ARGB_8888)
+        val maskBitmap = createBitmap(maskSize, maskSize)
         val pixels = IntArray(maskSize * maskSize)
-        val threshold = 0.5f
+        // MODIFIQUE ESTE VALOR AJUSTE
+        val threshold = 0.7f
         for (y in 0 until maskSize) {
             for (x in 0 until maskSize) {
                 val value = if (mask[y][x] > threshold) 255 else 0
@@ -283,7 +286,7 @@ class YOLO11Segmentation(private val context: Context) {
         maskBitmap.setPixels(pixels, 0, maskSize, 0, 0, maskSize, maskSize)
 
         // Scale to original image size for overlay
-        return Bitmap.createScaledBitmap(maskBitmap, originalWidth, originalHeight, true)
+        return maskBitmap.scale(originalWidth, originalHeight)
     }
 
     fun processImage(bitmap: Bitmap): Bitmap {
