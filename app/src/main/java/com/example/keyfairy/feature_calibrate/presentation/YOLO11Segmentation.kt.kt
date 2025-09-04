@@ -108,6 +108,8 @@ class YOLO11Segmentation(private val context: Context) {
         // Draw the scaled image centered on the black background
         canvas.drawBitmap(scaledBitmap, left, top, null)
 
+        println("Padding Dim: ${canvas.width}x${canvas.height}")
+
         // Create ByteBuffer for the input tensor
         val inputBuffer = ByteBuffer.allocateDirect(4 * modelSize * modelSize * 3)
         inputBuffer.order(java.nio.ByteOrder.nativeOrder())
@@ -115,6 +117,7 @@ class YOLO11Segmentation(private val context: Context) {
 
         // Convert bitmap to float array and normalize
         val intValues = IntArray(modelSize * modelSize)
+
         paddedBitmap.getPixels(intValues, 0, modelSize, 0, 0, modelSize, modelSize)
 
 
@@ -135,7 +138,7 @@ class YOLO11Segmentation(private val context: Context) {
         }
         paddedBitmap.recycle()
 
-        return Pair(inputBuffer, Pair(originalWidth, originalHeight))
+        return Pair(inputBuffer, Pair(608, 608))
     }
 
     private fun postprocessSegmentation(
@@ -241,55 +244,45 @@ class YOLO11Segmentation(private val context: Context) {
         // maskPrototypes shape: [1, 152, 152, 32]
         val prototypeData = maskPrototypes.floatArray
         val shape = maskPrototypes.shape
+        val maskSize = shape[1] // 152
+        val numMasks = shape[3] // 32
 
-        println("Mask prototypes shape: ${shape.contentToString()}")
-
-        val maskSize = 152 // From your output shape
-        val numMasks = 32
-
-        // Reshape prototypes - shape is [1, 152, 152, 32]
-        val prototypes = Array(numMasks) { Array(maskSize) { FloatArray(maskSize) } }
-
+        // Reshape prototypes: [1, H, W, C] -> [H][W][C]
+        val prototypes = Array(maskSize) { Array(maskSize) { FloatArray(numMasks) } }
         var index = 0
         for (h in 0 until maskSize) {
             for (w in 0 until maskSize) {
                 for (c in 0 until numMasks) {
-                    if (index < prototypeData.size) {
-                        prototypes[c][h][w] = prototypeData[index++]
-                    }
+                    prototypes[h][w][c] = prototypeData[index++]
                 }
             }
         }
 
-        // Matrix multiplication: mask = coeffs * prototypes
+        // Matrix multiplication: for each [h,w], dot(maskCoeffs, prototypes[h][w])
         val mask = Array(maskSize) { FloatArray(maskSize) { 0f } }
-
         for (h in 0 until maskSize) {
             for (w in 0 until maskSize) {
                 var sum = 0f
                 for (c in 0 until numMasks) {
-                    sum += maskCoeffs[c] * prototypes[c][h][w]
+                    sum += maskCoeffs[c] * prototypes[h][w][c]
                 }
-                mask[h][w] = 1f / (1f + exp(-sum)) // Sigmoid activation
+                mask[h][w] = 1f / (1f + exp(-sum)) // Sigmoid
             }
         }
 
-        // Create mask bitmap
+        // Convert to bitmap: threshold + to ARGB
         val maskBitmap = Bitmap.createBitmap(maskSize, maskSize, Bitmap.Config.ARGB_8888)
         val pixels = IntArray(maskSize * maskSize)
-
-        // Apply threshold and set pixels
         val threshold = 0.5f
         for (y in 0 until maskSize) {
             for (x in 0 until maskSize) {
                 val value = if (mask[y][x] > threshold) 255 else 0
-                pixels[y * maskSize + x] = Color.argb(255, value, value, value)
+                pixels[y * maskSize + x] = Color.argb(128, value, 0, 0) // semi-transparent red
             }
         }
-
         maskBitmap.setPixels(pixels, 0, maskSize, 0, 0, maskSize, maskSize)
 
-        // Scale to original image size
+        // Scale to original image size for overlay
         return Bitmap.createScaledBitmap(maskBitmap, originalWidth, originalHeight, true)
     }
 
@@ -315,7 +308,7 @@ class YOLO11Segmentation(private val context: Context) {
                 1 to maskPrototypes.buffer
             )
 
-// Run inference
+// Run inferenceOJO ESTE POTENCIALMENTE FALA
             interpreter!!.runForMultipleInputsOutputs(arrayOf(inputBuffer), outputMap)
 
 
@@ -368,9 +361,16 @@ class YOLO11Segmentation(private val context: Context) {
         return buffer
     }
 
+
     fun getPianoKeysFromImage(imageBytes: ByteArray): ByteArray? {
         return try {
-            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+
+            val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
+            val inputStream = assetManager.open("test_images/90.jpg")
+            val byteArrayMocked = inputStream.readBytes()
+            inputStream.close()
+
+            val bitmap = BitmapFactory.decodeByteArray(byteArrayMocked, 0, byteArrayMocked.size)
                 ?: throw Exception("Failed to decode image")
 
             val resultBitmap = processImage(bitmap)

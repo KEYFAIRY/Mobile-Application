@@ -219,9 +219,21 @@ class CalibrateCameraFragment : Fragment() {
             val py = Python.getInstance()
             val module = py.getModule("calibracion")
 
+
+
+
+            // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+            // La clase de YOLO11Segmentation fue cambiada temporalmente para utiliza
+            //imagenes quemas editela
             val segmentation = YOLO11Segmentation(requireContext())
             val resultBitmap = segmentation.getPianoKeysFromImage(imageBytes)
 //            print(resultBitmap)
+
+
+
+
+
+
 
             val rsp = module.callAttr("is_calibrated", resultBitmap, frameCapturedPianoAreaPercentage, context).toString() // Get JSON string
 
