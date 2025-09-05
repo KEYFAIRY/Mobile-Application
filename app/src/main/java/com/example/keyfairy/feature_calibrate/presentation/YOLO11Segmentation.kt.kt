@@ -140,7 +140,7 @@ class YOLO11Segmentation(private val context: Context) {
         }
         paddedBitmap.recycle()
 
-        return Pair(inputBuffer, Pair(608, 608))
+        return Pair(inputBuffer, Pair(originalWidth, originalHeight))
     }
 
 
@@ -288,76 +288,98 @@ class YOLO11Segmentation(private val context: Context) {
         maskPrototypes: TensorBuffer,
         originalWidth: Int,
         originalHeight: Int,
-        bbox: FloatArray // [cx, cy, w, h] in normalized format
+        bbox: FloatArray // [cx, cy, w, h] normalized to model input
     ): Bitmap? {
         if (maskCoeffs.isEmpty()) return null
 
-        val prototypeData = maskPrototypes.floatArray
-        val shape = maskPrototypes.shape
-        val maskSize = shape[1]
+        // 1) Read prototype tensor in NHWC
+        val proto = maskPrototypes.floatArray
+        val shape = maskPrototypes.shape // expected [1, maskH, maskW, numMasks]
+        val maskH = shape[1]
+        val maskW = shape[2]
         val numMasks = shape[3]
+        val strideNM = numMasks
+        val strideW = maskW * strideNM
 
-        val prototypes = Array(maskSize) { Array(maskSize) { FloatArray(numMasks) } }
-        var index = 0
-        for (h in 0 until maskSize) {
-            for (w in 0 until maskSize) {
-                for (c in 0 until numMasks) {
-                    prototypes[h][w][c] = prototypeData[index++]
-                }
-            }
-        }
+        // 2) Compose mask logits = sum_c (coeff[c] * proto[..., c]) and apply sigmoid + threshold
+        // Create a binary (0/255) mask at prototype resolution to avoid interpolation artifacts
+        val bin = IntArray(maskH * maskW)
+        val thresh = 0.5f // you can tune to 0.6–0.7 if you want tighter masks
 
-        val mask = Array(maskSize) { FloatArray(maskSize) { 0f } }
-        for (h in 0 until maskSize) {
-            for (w in 0 until maskSize) {
+        var p = 0
+        for (y in 0 until maskH) {
+            for (x in 0 until maskW) {
                 var sum = 0f
-                for (c in 0 until numMasks) {
-                    sum += maskCoeffs[c] * prototypes[h][w][c]
+                // index of (y, x, 0)
+                val base = y * strideW + x * strideNM
+                var c = 0
+                while (c < numMasks) {
+                    sum += maskCoeffs[c] * proto[base + c]
+                    c++
                 }
-                mask[h][w] = 1f / (1f + exp(-sum))
+                val prob = 1f / (1f + exp(-sum))
+                // Hard binarize now to keep edges crisp when upscaling
+                val a = if (prob > thresh) 255 else 0
+                // White with alpha a
+                bin[p++] = Color.argb(a, 255, 255, 255)
             }
         }
 
-        val maskBitmap = createBitmap(maskSize, maskSize)
-        val pixels = IntArray(maskSize * maskSize)
-        val threshold = 0.7f
-        for (y in 0 until maskSize) {
-            for (x in 0 until maskSize) {
-                val value = if (mask[y][x] > threshold) 255 else 0
-                pixels[y * maskSize + x] = Color.argb(128, value, 0, 0)
-            }
-        }
-        maskBitmap.setPixels(pixels, 0, maskSize, 0, 0, maskSize, maskSize)
+        // 3) Build a bitmap from the binary mask (proto resolution)
+        val protoMaskBmp = Bitmap.createBitmap(maskW, maskH, Bitmap.Config.ARGB_8888)
+        protoMaskBmp.setPixels(bin, 0, maskW, 0, 0, maskW, maskH)
 
-        // Scale mask to original image size
-        val scaledMask = maskBitmap.scale(originalWidth, originalHeight)
+        // 4) Upscale to model input size (e.g., 608x608) with NEAREST to avoid grey edges
+        val modelMaskBmp = Bitmap.createScaledBitmap(protoMaskBmp, modelSize, modelSize, /*filter=*/false)
+        protoMaskBmp.recycle()
 
-        // Restrict mask to bounding box
-        val cx = bbox[0] * originalWidth
-        val cy = bbox[1] * originalHeight
-        val w = bbox[2] * originalWidth
-        val h = bbox[3] * originalHeight
+        // 5) Suppress outside the bbox in model space (bbox is normalized to model input)
+        val cx = bbox[0] * modelSize
+        val cy = bbox[1] * modelSize
+        val bw = bbox[2] * modelSize
+        val bh = bbox[3] * modelSize
+        val leftBox = ((cx - bw / 2f).toInt()).coerceIn(0, modelSize - 1)
+        val topBox = ((cy - bh / 2f).toInt()).coerceIn(0, modelSize - 1)
+        val rightBox = ((cx + bw / 2f).toInt()).coerceIn(0, modelSize - 1)
+        val bottomBox = ((cy + bh / 2f).toInt()).coerceIn(0, modelSize - 1)
 
-        val left = ((cx - w / 2).toInt()).coerceAtLeast(0)
-        val top = ((cy - h / 2).toInt()).coerceAtLeast(0)
-        val right = ((cx + w / 2).toInt()).coerceAtMost(originalWidth - 1)
-        val bottom = ((cy + h / 2).toInt()).coerceAtMost(originalHeight - 1)
-
-        val maskCropped = scaledMask.copy(Bitmap.Config.ARGB_8888, true)
-        val maskPixels = IntArray(originalWidth * originalHeight)
-        maskCropped.getPixels(maskPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
-
-        for (y in 0 until originalHeight) {
-            for (x in 0 until originalWidth) {
-                val idx = y * originalWidth + x
-                if (x < left || x > right || y < top || y > bottom) {
-                    maskPixels[idx] = maskPixels[idx] and 0x00FFFFFF // set alpha to 0
+        val modelPixels = IntArray(modelSize * modelSize)
+        modelMaskBmp.getPixels(modelPixels, 0, modelSize, 0, 0, modelSize, modelSize)
+        for (y in 0 until modelSize) {
+            val yOff = y * modelSize
+            val insideY = y in topBox..bottomBox
+            for (x in 0 until modelSize) {
+                if (!insideY || x < leftBox || x > rightBox) {
+                    val idx = yOff + x
+                    // zero alpha, keep RGB
+                    modelPixels[idx] = modelPixels[idx] and 0x00FFFFFF
                 }
             }
         }
-        maskCropped.setPixels(maskPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
+        modelMaskBmp.setPixels(modelPixels, 0, modelSize, 0, 0, modelSize, modelSize)
 
-        return maskCropped
+        // 6) Unpad back to the original image size using the same letterbox math as preprocess
+        //    (recompute scale/offset deterministically)
+        val scale = minOf(
+            modelSize.toFloat() / originalWidth.toFloat(),
+            modelSize.toFloat() / originalHeight.toFloat()
+        )
+        val scaledW = (originalWidth * scale).toInt()
+        val scaledH = (originalHeight * scale).toInt()
+        val padLeft = ((modelSize - scaledW) / 2f).toInt()
+        val padTop = ((modelSize - scaledH) / 2f).toInt()
+
+        // Crop the valid (unpadded) region from model mask
+        val cropRectW = scaledW.coerceAtLeast(1)
+        val cropRectH = scaledH.coerceAtLeast(1)
+        val unpadded = Bitmap.createBitmap(modelMaskBmp, padLeft, padTop, cropRectW, cropRectH)
+        modelMaskBmp.recycle()
+
+        // Resize to original image with NEAREST to keep the edges crisp
+        val finalMask = Bitmap.createScaledBitmap(unpadded, originalWidth, originalHeight, /*filter=*/false)
+        unpadded.recycle()
+
+        return finalMask
     }
 
     fun processImage(bitmap: Bitmap): Bitmap {
@@ -422,26 +444,11 @@ class YOLO11Segmentation(private val context: Context) {
         }
     }
 
-    private fun convertToTensorBuffer(array3D: Array<Array<FloatArray>>, shape: IntArray): TensorBuffer {
-        val buffer = TensorBuffer.createFixedSize(shape, org.tensorflow.lite.DataType.FLOAT32)
-        val flatArray = array3D.flatMap { it.flatMap { it.asIterable() } }.toFloatArray()
-        buffer.loadArray(flatArray)
-        return buffer
-    }
-
-    private fun convertToTensorBuffer(array4D: Array<Array<Array<FloatArray>>>, shape: IntArray): TensorBuffer {
-        val buffer = TensorBuffer.createFixedSize(shape, org.tensorflow.lite.DataType.FLOAT32)
-        val flatArray = array4D.flatMap { it.flatMap { it.flatMap { it.asIterable() } } }.toFloatArray()
-        buffer.loadArray(flatArray)
-        return buffer
-    }
-
-
     fun getPianoKeysFromImage(imageBytes: ByteArray): ByteArray? {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/87.jpg")
+            val inputStream = assetManager.open("test_images/90.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
