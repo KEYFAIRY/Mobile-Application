@@ -289,7 +289,8 @@ class YOLO11Segmentation(private val context: Context) {
         originalWidth: Int,
         originalHeight: Int,
         bbox: FloatArray, // [cx, cy, w, h] normalized to model input
-        smooth: Boolean = true // toggle between smooth (bilinear) and blocky (nearest)
+        smooth: Boolean = true,
+        negateCoeffs: Boolean = false // Option to negate coefficients
     ): Bitmap? {
         if (maskCoeffs.isEmpty()) return null
 
@@ -302,74 +303,129 @@ class YOLO11Segmentation(private val context: Context) {
         val strideNM = numMasks
         val strideW = maskW * strideNM
 
-        // 2) Compose mask logits = sum_c (coeff[c] * proto[..., c]) and apply sigmoid
+        // 2) Compose mask logits and apply sigmoid
         val prob = FloatArray(maskH * maskW)
         var p = 0
+        var minProb = Float.MAX_VALUE
+        var maxProb = Float.MIN_VALUE
+        var minLogit = Float.MAX_VALUE
+        var maxLogit = Float.MIN_VALUE
+
         for (y in 0 until maskH) {
             for (x in 0 until maskW) {
                 val base = y * strideW + x * strideNM
                 var sum = 0f
-                var c = 0
-                while (c < numMasks) {
-                    sum += maskCoeffs[c] * proto[base + c]
-                    c++
+                for (c in 0 until numMasks) {
+                    sum += (if (negateCoeffs) -maskCoeffs[c] else maskCoeffs[c]) * proto[base + c]
                 }
-                prob[p++] = 1f / (1f + exp(-sum)) // sigmoid
+                minLogit = minOf(minLogit, sum)
+                maxLogit = maxOf(maxLogit, sum)
+                prob[p] = 1f / (1f + exp(-sum)) // sigmoid
+                minProb = minOf(minProb, prob[p])
+                maxProb = maxOf(maxProb, prob[p])
+                p++
             }
         }
 
-        // 3) Convert prob[] to grayscale Bitmap at prototype resolution
+        // Debug: Log ranges
+        println("Logit range: min=$minLogit, max=$maxLogit")
+        println("Probability range: min=$minProb, max=$maxProb")
+        println("Bbox normalized: cx=${bbox[0]}, cy=${bbox[1]}, w=${bbox[2]}, h=${bbox[3]}")
+
+        // 3) Check average probability in bbox at prototype resolution
+        val cxProto = bbox[0] * maskW
+        val cyProto = bbox[1] * maskH
+        val bwProto = bbox[2] * maskW
+        val bhProto = bbox[3] * maskH
+        val leftBoxProto = (cxProto - bwProto / 2f).toInt().coerceIn(0, maskW - 1)
+        val topBoxProto = (cyProto - bhProto / 2f).toInt().coerceIn(0, maskH - 1)
+        val rightBoxProto = (cxProto + bwProto / 2f).toInt().coerceIn(0, maskW - 1)
+        val bottomBoxProto = (cyProto + bhProto / 2f).toInt().coerceIn(0, maskH - 1)
+        println("Bbox in prototype space: left=$leftBoxProto, top=$topBoxProto, right=$rightBoxProto, bottom=$bottomBoxProto")
+
+        var bboxProbSum = 0f
+        var bboxPixelCount = 0
+        for (y in topBoxProto..bottomBoxProto) {
+            for (x in leftBoxProto..rightBoxProto) {
+                val idx = y * maskW + x
+                if (idx < prob.size) {
+                    bboxProbSum += prob[idx]
+                    bboxPixelCount++
+                }
+            }
+        }
+        val bboxAvgProb = if (bboxPixelCount > 0) bboxProbSum / bboxPixelCount else 0f
+        println("Average probability in bbox: $bboxAvgProb")
+
+//        // 4) Invert probabilities if object has low probabilities
+//        if (bboxAvgProb < 0.5f) {
+//            println("Inverting probabilities (bbox avg prob = $bboxAvgProb)")
+//            for (i in prob.indices) {
+//                prob[i] = 1f - prob[i]
+//            }
+//        }
+
+        // 5) Convert prob[] to grayscale Bitmap at prototype resolution
         val gray = IntArray(maskH * maskW)
         for (i in prob.indices) {
             val v = (prob[i] * 255).toInt().coerceIn(0, 255)
-            gray[i] = Color.argb(v, 255, 255, 255) // alpha = prob
+            gray[i] = Color.argb(255, v, v, v) // RGB = probability
         }
         val protoMaskBmp = createBitmap(maskW, maskH)
         protoMaskBmp.setPixels(gray, 0, maskW, 0, 0, maskW, maskH)
 
-        // 4) Upscale to model size
-        // smooth=true → bilinear (filter=true), smooth=false → nearest neighbor (filter=false)
+        // Save proto mask for debugging
+        val protoStream = java.io.ByteArrayOutputStream()
+        protoMaskBmp.compress(Bitmap.CompressFormat.PNG, 100, protoStream)
+
+
+        // 6) Upscale to model size
         val modelMaskBmp = protoMaskBmp.scale(modelSize, modelSize, smooth)
         protoMaskBmp.recycle()
 
-        // 5) Threshold at model resolution (late binarization if smooth=true)
+        // 7) Threshold with YOLO library’s default
         val modelPixels = IntArray(modelSize * modelSize)
         modelMaskBmp.getPixels(modelPixels, 0, modelSize, 0, 0, modelSize, modelSize)
-        val thresh = 0.9f
+        val thresh = 0.5f // Match Ultralytics default
+        println("Using threshold: $thresh")
         for (i in modelPixels.indices) {
-            val a = Color.alpha(modelPixels[i])
-            val probVal = a / 255f
-            if (probVal > thresh) {
-                modelPixels[i] = Color.argb(255, 255, 255, 255)
+            val v = Color.red(modelPixels[i])
+            modelPixels[i] = if (v / 255f > thresh) {
+                Color.argb(255, 255, 255, 255) // White for object
             } else {
-                modelPixels[i] = Color.argb(0, 255, 255, 255)
+                Color.argb(255, 0, 0, 0) // Black for background
             }
         }
         modelMaskBmp.setPixels(modelPixels, 0, modelSize, 0, 0, modelSize, modelSize)
 
-        // 6) Suppress outside the bbox in model space
-        val cx = bbox[0] * modelSize
-        val cy = bbox[1] * modelSize
-        val bw = bbox[2] * modelSize
-        val bh = bbox[3] * modelSize
-        val leftBox = ((cx - bw / 2f).toInt()).coerceIn(0, modelSize - 1)
-        val topBox = ((cy - bh / 2f).toInt()).coerceIn(0, modelSize - 1)
-        val rightBox = ((cx + bw / 2f).toInt()).coerceIn(0, modelSize - 1)
-        val bottomBox = ((cy + bh / 2f).toInt()).coerceIn(0, modelSize - 1)
+        // 8) Adjust bounding box with padding to avoid over-suppression
+        val cxModel = bbox[0] * modelSize
+        val cyModel = bbox[1] * modelSize
+        val bwModel = bbox[2] * modelSize * 1.1f // Add 10% padding
+        val bhModel = bbox[3] * modelSize * 1.1f // Add 10% padding
+        val leftBoxModel = (cxModel - bwModel / 2f).toInt().coerceIn(0, modelSize - 1)
+        val topBoxModel = (cyModel - bhModel / 2f).toInt().coerceIn(0, modelSize - 1)
+        val rightBoxModel = (cxModel + bwModel / 2f).toInt().coerceIn(0, modelSize - 1)
+        val bottomBoxModel = (cyModel + bhModel / 2f).toInt().coerceIn(0, modelSize - 1)
+        println("Bbox in model space: left=$leftBoxModel, top=$topBoxModel, right=$rightBoxModel, bottom=$bottomBoxModel")
 
         for (y in 0 until modelSize) {
             val yOff = y * modelSize
-            val insideY = y in topBox..bottomBox
+            val insideY = y in topBoxModel..bottomBoxModel
             for (x in 0 until modelSize) {
-                if (!insideY || x < leftBox || x > rightBox) {
-                    val idx = yOff + x
-                    modelPixels[idx] = modelPixels[idx] and 0x00FFFFFF // zero alpha
+                if (!insideY || x < leftBoxModel || x > rightBoxModel) {
+                    modelPixels[yOff + x] = Color.argb(255, 0, 0, 0) // Black outside bbox
                 }
             }
         }
         modelMaskBmp.setPixels(modelPixels, 0, modelSize, 0, 0, modelSize, modelSize)
 
-        // 7) Unpad back to original image size
+        // Save model mask for debugging
+        val modelStream = java.io.ByteArrayOutputStream()
+        modelMaskBmp.compress(Bitmap.CompressFormat.PNG, 100, modelStream)
+
+
+        // 9) Unpad to original size
         val scale = minOf(
             modelSize.toFloat() / originalWidth.toFloat(),
             modelSize.toFloat() / originalHeight.toFloat()
@@ -384,7 +440,11 @@ class YOLO11Segmentation(private val context: Context) {
         val unpadded = Bitmap.createBitmap(modelMaskBmp, padLeft, padTop, cropRectW, cropRectH)
         modelMaskBmp.recycle()
 
-        return unpadded
+        // 10) Resize to exact original dimensions
+        val finalBitmap = unpadded.scale(originalWidth, originalHeight, true)
+        unpadded.recycle()
+
+        return finalBitmap
     }
 
 
@@ -454,7 +514,7 @@ class YOLO11Segmentation(private val context: Context) {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/96.jpg")
+            val inputStream = assetManager.open("test_images/98.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
