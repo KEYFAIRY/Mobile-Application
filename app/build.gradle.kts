@@ -71,8 +71,6 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
 
     //Dependencias ejecutar el modelo
-    implementation("org.tensorflow:tensorflow-lite:2.17.0")
-    implementation("org.tensorflow:tensorflow-lite-support:0.5.0")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
 
 

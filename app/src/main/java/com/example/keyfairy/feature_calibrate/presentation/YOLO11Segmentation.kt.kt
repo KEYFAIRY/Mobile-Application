@@ -19,7 +19,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     private val modelSize = 608               // model input W (=608)
     private val confThreshold = 0.7f
-    private val iouThreshold = 0.5f
+    private val iouThreshold = 0.8f
     private val maskH = 152                   // prototype H
     private val maskW = 152                   // prototype W
     private val numMasks = 32                 // prototype channels
@@ -36,7 +36,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     private fun loadModel(): Boolean {
         return try {
-            val modelBytes = context.assets.open("yolo11s-seg-keys.onnx").use { it.readBytes() }
+            val modelBytes = context.assets.open("yolo11s-seg-keys-nms.onnx").use { it.readBytes() }
             ortSession = ortEnv.createSession(modelBytes, OrtSession.SessionOptions())
             println("ONNX model loaded successfully")
             true
@@ -79,10 +79,10 @@ class YOLO11Segmentation(private val context: Context) {
 
         // Fill with black background
         canvas.drawColor(Color.BLACK)
-
+        println(scaledHeight)
         // Calculate position to center the scaled image
         val left = (modelSize - scaledWidth) / 2f
-        val top = (modelSize - scaledHeight) / 2f
+        val top = 0f
 
         println("Padding - left: $left, top: $top")
 
@@ -153,50 +153,69 @@ class YOLO11Segmentation(private val context: Context) {
         originalWidth: Int,
         originalHeight: Int
     ): Pair<List<Detection>, FloatArray> {
-        val channels = 37
-        val numDetections = predictions.size / channels
+        val rowLen = 38
+        if (predictions.isEmpty() || predictions.size % rowLen != 0) {
+            println("Unexpected predictions length ${predictions.size}, expected multiple of $rowLen")
+        }
+        val numDetections = predictions.size / rowLen
         val detections = mutableListOf<Detection>()
 
         for (i in 0 until numDetections) {
-            val xCenter = predictions[0 * numDetections + i]
-            val yCenter = predictions[1 * numDetections + i]
-            val width = predictions[2 * numDetections + i]
-            val height = predictions[3 * numDetections + i]
-            val confidence = predictions[4 * numDetections + i]
+            val base = i * rowLen
+            val x1raw = predictions[base + 0]
+            val y1raw = predictions[base + 1]
+            val x2raw = predictions[base + 2]
+            val y2raw = predictions[base + 3]
+            val score = predictions[base + 4]
+            // val cls = predictions[base + 5] // not used (single class)
 
-            if (confidence > confThreshold) {
-                // convert normalized model coords -> original image coords
-                val x1 = ((xCenter - width / 2f) * originalWidth / modelSize).toInt().coerceIn(0, originalWidth)
-                val y1 = ((yCenter - height / 2f) * originalHeight / modelSize).toInt().coerceIn(0, originalHeight)
-                val x2 = ((xCenter + width / 2f) * originalWidth / modelSize).toInt().coerceIn(0, originalWidth)
-                val y2 = ((yCenter + height / 2f) * originalHeight / modelSize).toInt().coerceIn(0, originalHeight)
+            if (score <= confThreshold) continue
 
-                val coeffs = FloatArray(numMasks)
-                for (c in 0 until numMasks) {
-                    // mask coeffs are channels 5..36
-                    coeffs[c] = predictions[(5 + c) * numDetections + i]
+            // Map coords to original image coordinates.
+            // Many exported ONNX detectors output normalized coords (0..1),
+            // but some return pixel coords relative to the model input width/height (e.g. 0..608).
+            fun mapX(raw: Float): Float {
+                return if (raw <= 1f) {
+                    // normalized -> original pixel
+                    (raw * originalWidth.toFloat()).coerceIn(0f, originalWidth.toFloat())
+                } else {
+                    // absolute relative to modelSize -> scale to original image
+                    (raw * (originalWidth.toFloat() / modelSize.toFloat())).coerceIn(0f, originalWidth.toFloat())
                 }
-
-                detections.add(Detection(floatArrayOf(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat()), confidence, coeffs))
             }
+            fun mapY(raw: Float): Float {
+                return if (raw <= 1f) {
+                    (raw * originalHeight.toFloat()).coerceIn(0f, originalHeight.toFloat())
+                } else {
+                    (raw * (originalHeight.toFloat() / modelSize.toFloat())).coerceIn(0f, originalHeight.toFloat())
+                }
+            }
+
+            val x1 = mapX(x1raw)
+            val y1 = mapY(y1raw)
+            val x2 = mapX(x2raw)
+            val y2 = mapY(y2raw)
+
+            // Extract 32 mask coefficients (base+6 .. base+37)
+            val coeffs = FloatArray(numMasks)
+            for (c in 0 until numMasks) {
+                val idx = base + 6 + c
+                coeffs[c] = if (idx < predictions.size) predictions[idx] else 0f
+            }
+
+            detections.add(
+                Detection(
+                    bbox = floatArrayOf(x1, y1, x2, y2),
+                    confidence = score,
+                    maskCoeffs = coeffs
+                )
+            )
         }
 
-        // NMS (same as before)
-        val sorted = detections.sortedByDescending { it.confidence }.toMutableList()
-        val kept = mutableListOf<Detection>()
-        while (sorted.isNotEmpty()) {
-            val first = sorted.removeAt(0)
-            kept.add(first)
-            val it = sorted.iterator()
-            while (it.hasNext()) {
-                val other = it.next()
-                val iou = calculateIoU(first, other)
-                if (iou >= iouThreshold) it.remove()
-            }
-        }
-
-        println("After NMS: ${kept.size} detections")
-        return Pair(kept, maskPrototypes)
+        // The model already applied NMS in-export, but keep a safety check (optional):
+        // if you trust model NMS completely you can skip this step.
+        println("Detections before optional filter: ${detections.size}")
+        return Pair(detections, maskPrototypes)
     }
 
     private fun calculateIoU(det1: Detection, det2: Detection): Float {
@@ -230,64 +249,64 @@ class YOLO11Segmentation(private val context: Context) {
         maskPrototypes: FloatArray,
         originalWidth: Int,
         originalHeight: Int,
-        bbox: FloatArray // x1,y1,x2,y2 in original coords
+        bbox: FloatArray // x1,y1,x2,y2 in original coords (pixels)
     ): Bitmap? {
-        if (maskCoeffs.isEmpty()) return null
+        if (maskCoeffs.isEmpty() || maskPrototypes.isEmpty()) return null
 
-        // Compute proto logits -> probs (maskH x maskW)
         val protoSize = maskH * maskW
         val prob = FloatArray(protoSize)
 
+        // Compute logits then sigmoid per proto pixel
         for (y in 0 until maskH) {
+            val rowOffset = y * maskW
             for (x in 0 until maskW) {
+                val pxIndex = rowOffset + x
                 var sum = 0f
-                val pxIndex = y * maskW + x
-                // maskPrototypes expected layout: c * (maskH*maskW) + y*maskW + x
+                // maskPrototypes layout NCHW flattened -> batch(=0) then c,h,w
+                // offset for channel c: c * protoSize + pxIndex
                 for (c in 0 until numMasks) {
                     val protoVal = maskPrototypes[c * protoSize + pxIndex]
                     sum += maskCoeffs[c] * protoVal
                 }
-                prob[pxIndex] = sigmoid(sum)
+                prob[pxIndex] = 1f / (1f + exp(-sum))
             }
         }
 
-        // Build prototype grayscale bitmap (0..255) and upscale
+        // Make prototype grayscale bitmap
         val protoPixels = IntArray(protoSize)
-        for (i in prob.indices) {
+        for (i in 0 until protoSize) {
             val v = (prob[i] * 255f).toInt().coerceIn(0, 255)
             protoPixels[i] = Color.argb(255, v, v, v)
         }
         val protoBmp = createBitmap(maskW, maskH)
         protoBmp.setPixels(protoPixels, 0, maskW, 0, 0, maskW, maskH)
 
-        // Upscale prototype to original image size (bilinear)
-        val up = protoBmp.scale(originalWidth, originalHeight)
+        // Upscale to original image size (use bilinear to keep edges smoother)
+        val up = protoBmp.scale(originalWidth, originalHeight, true)
         protoBmp.recycle()
 
-        // Threshold (adaptive simple choice) -> binary mask
+        // Threshold to binary mask (tune threshold if necessary)
         val finalPixels = IntArray(originalWidth * originalHeight)
         up.getPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
-
-        // use threshold 0.5 (you can tune or compute Otsu per-case)
         val thresh = 0.5f
         for (i in finalPixels.indices) {
-            val v = Color.red(finalPixels[i]) // grayscale stored in R/G/B
-            val p = v / 255f
-            finalPixels[i] = if (p > thresh) Color.WHITE else Color.BLACK
+            val v = Color.red(finalPixels[i])
+            finalPixels[i] = if (v / 255f > thresh) Color.WHITE else Color.BLACK
         }
 
-        // Enforce bbox strict mask: outside bbox -> background
+        // Enforce bbox strict mask: outside bbox -> background (black)
+        // Clamp bbox coords to integer image bounds:
         val x1 = bbox[0].toInt().coerceIn(0, originalWidth - 1)
         val y1 = bbox[1].toInt().coerceIn(0, originalHeight - 1)
         val x2 = bbox[2].toInt().coerceIn(0, originalWidth - 1)
         val y2 = bbox[3].toInt().coerceIn(0, originalHeight - 1)
 
         for (y in 0 until originalHeight) {
-            val yOff = y * originalWidth
+            val rowOff = y * originalWidth
             val insideY = y in y1..y2
             for (x in 0 until originalWidth) {
                 if (!insideY || x < x1 || x > x2) {
-                    finalPixels[yOff + x] = Color.BLACK
+                    finalPixels[rowOff + x] = Color.BLACK
                 }
             }
         }
@@ -319,6 +338,12 @@ class YOLO11Segmentation(private val context: Context) {
             // Run and ensure outputs/results are closed
             ortSession!!.run(mapOf(ortSession!!.inputNames.first() to inputTensor)).use { results ->
                 // results[0] -> predictions tensor ; results[1] -> mask prototypes
+                println("Number of outputs: ${results.size()}")
+                for (i in 0 until results.size()) {
+                    val tensor = results[i] as OnnxTensor
+                    println("Output $i shape: ${tensor.info.shape?.contentToString()}")
+                    println("Output $i name: ${ortSession!!.outputNames.toList()[i]}")
+                }
                 val predTensor = results[0] as OnnxTensor
                 val protoTensor = results[1] as OnnxTensor
                 val shape = protoTensor.info.shape
@@ -371,7 +396,7 @@ class YOLO11Segmentation(private val context: Context) {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/60.jpg")
+            val inputStream = assetManager.open("test_images/68.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
@@ -380,7 +405,7 @@ class YOLO11Segmentation(private val context: Context) {
 
             // DESCOMENTAR PARA RERESAR AL OIGINAL
             val resultBitmap = processImage(bitmap)
-            //val resultBitmap = preprocessImageTest(bitmap)
+//            val resultBitmap = preprocessImageTest(bitmap)
 
             val stream = java.io.ByteArrayOutputStream()
             resultBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
