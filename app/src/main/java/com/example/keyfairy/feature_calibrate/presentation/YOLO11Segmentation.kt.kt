@@ -55,6 +55,74 @@ class YOLO11Segmentation(private val context: Context) {
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
 
+        println("Original image size: ${originalWidth}x${originalHeight}")
+        println("Target model size: ${modelSize}x${modelSize}")
+
+        // Calculate scaling factor to fit image within target size while maintaining aspect ratio
+        val scale = minOf(
+            modelSize.toFloat() / originalWidth,
+            modelSize.toFloat() / originalHeight
+        )
+
+        // Calculate new dimensions after scaling
+        val scaledWidth = (originalWidth * scale).toInt()
+        val scaledHeight = (originalHeight * scale).toInt()
+
+        println("Scaled dimensions: ${scaledWidth}x${scaledHeight}")
+
+        // First, resize the bitmap maintaining aspect ratio
+        val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight, true)
+
+        // Create a new bitmap with target size (modelSize x modelSize) and black background
+        val paddedBitmap = createBitmap(modelSize, modelSize)
+        val canvas = android.graphics.Canvas(paddedBitmap)
+
+        // Fill with black background
+        canvas.drawColor(Color.BLACK)
+
+        // Calculate position to center the scaled image
+        val left = (modelSize - scaledWidth) / 2f
+        val top = (modelSize - scaledHeight) / 2f
+
+        println("Padding - left: $left, top: $top")
+
+        // Draw the scaled image centered on the black background
+        canvas.drawBitmap(scaledBitmap, left, top, null)
+
+        println("Padding Dim: ${canvas.width}x${canvas.height}")
+
+        // Convert to NCHW float array normalized to [0,1]
+        val total = 1 * 3 * modelSize * modelSize
+        val floatArr = FloatArray(total)
+        val pixels = IntArray(modelSize * modelSize)
+        paddedBitmap.getPixels(pixels, 0, modelSize, 0, 0, modelSize, modelSize)
+
+        // fill channel-first: for c in {R,G,B} for y,x
+        val HW = modelSize * modelSize
+        for (y in 0 until modelSize) {
+            for (x in 0 until modelSize) {
+                val p = pixels[y * modelSize + x]
+                val r = ((p shr 16) and 0xFF) / 255f
+                val g = ((p shr 8) and 0xFF) / 255f
+                val b = (p and 0xFF) / 255f
+                floatArr[0 * HW + y * modelSize + x] = r
+                floatArr[1 * HW + y * modelSize + x] = g
+                floatArr[2 * HW + y * modelSize + x] = b
+            }
+        }
+
+        scaledBitmap.recycle()
+        paddedBitmap.recycle()
+
+        val fb = FloatBuffer.wrap(floatArr)
+        return Pair(fb, Pair(originalWidth, originalHeight))
+    }
+
+    private fun preprocessImageTest(bitmap: Bitmap): Bitmap {
+
+        val originalWidth = bitmap.width
+        val originalHeight = bitmap.height
+
         // scale factor to make width == modelSize
         val scale = modelSize.toFloat() / originalWidth.toFloat()
         val newHeight = (originalHeight * scale).toInt()
@@ -69,33 +137,8 @@ class YOLO11Segmentation(private val context: Context) {
         canvas.drawColor(Color.BLACK)
         canvas.drawBitmap(resized, 0f, 0f, null) // image at top, pad bottom if any
 
-        // convert to NCHW float array normalized to [0,1]
-        val total = 1 * 3 * modelSize * modelSize
-        val floatArr = FloatArray(total)
-        val pixels = IntArray(modelSize * modelSize)
-        padded.getPixels(pixels, 0, modelSize, 0, 0, modelSize, modelSize)
+        return padded
 
-        // fill channel-first: for c in {R,G,B} for y,x
-        val HW = modelSize * modelSize
-        var idx = 0
-        for (y in 0 until modelSize) {
-            for (x in 0 until modelSize) {
-                val p = pixels[y * modelSize + x]
-                val r = ((p shr 16) and 0xFF) / 255f
-                val g = ((p shr 8) and 0xFF) / 255f
-                val b = (p and 0xFF) / 255f
-                floatArr[0 * HW + y * modelSize + x] = r
-                floatArr[1 * HW + y * modelSize + x] = g
-                floatArr[2 * HW + y * modelSize + x] = b
-                idx++
-            }
-        }
-
-        resized.recycle()
-        padded.recycle()
-
-        val fb = FloatBuffer.wrap(floatArr)
-        return Pair(fb, Pair(originalWidth, originalHeight))
     }
 
     /**
@@ -214,11 +257,11 @@ class YOLO11Segmentation(private val context: Context) {
             val v = (prob[i] * 255f).toInt().coerceIn(0, 255)
             protoPixels[i] = Color.argb(255, v, v, v)
         }
-        val protoBmp = Bitmap.createBitmap(maskW, maskH, Bitmap.Config.ARGB_8888)
+        val protoBmp = createBitmap(maskW, maskH)
         protoBmp.setPixels(protoPixels, 0, maskW, 0, 0, maskW, maskH)
 
         // Upscale prototype to original image size (bilinear)
-        val up = Bitmap.createScaledBitmap(protoBmp, originalWidth, originalHeight, true)
+        val up = protoBmp.scale(originalWidth, originalHeight)
         protoBmp.recycle()
 
         // Threshold (adaptive simple choice) -> binary mask
@@ -278,6 +321,8 @@ class YOLO11Segmentation(private val context: Context) {
                 // results[0] -> predictions tensor ; results[1] -> mask prototypes
                 val predTensor = results[0] as OnnxTensor
                 val protoTensor = results[1] as OnnxTensor
+                val shape = protoTensor.info.shape
+                println("Mask prototype output shape: ${shape?.contentToString()}")
 
                 // Read predictions into float array
                 val predBuf = predTensor.floatBuffer
@@ -326,7 +371,7 @@ class YOLO11Segmentation(private val context: Context) {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/98.jpg")
+            val inputStream = assetManager.open("test_images/60.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
