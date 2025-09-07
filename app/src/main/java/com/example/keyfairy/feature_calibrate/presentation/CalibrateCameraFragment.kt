@@ -43,7 +43,7 @@ class CalibrateCameraFragment : Fragment() {
     private var captureRunnable: Runnable? = null
 
     // Segundos para tomar la imagen
-    private val CAPTURE_INTERVAL = 2000L // 1 seconds
+    private val CAPTURE_INTERVAL = 1000L // 1 seconds
 
     private var shouldCaptureFrame = false
 
@@ -62,6 +62,9 @@ class CalibrateCameraFragment : Fragment() {
     private lateinit var soundPool: SoundPool
     private val soundIds = mutableMapOf<String, Int>()
 
+    // Instancia para la segmentacion
+    private var segmentation: YOLO11Segmentation? = null
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -74,6 +77,8 @@ class CalibrateCameraFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         (activity as? HomeActivity)?.enableFullscreen()
         (activity as? HomeActivity)?.hideBottomNavigation()
+
+        segmentation = YOLO11Segmentation(requireContext())
 
         previewView = view.findViewById(R.id.previewView)
 
@@ -226,8 +231,7 @@ class CalibrateCameraFragment : Fragment() {
             // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
             // La clase de YOLO11Segmentation fue cambiada temporalmente para utiliza
             //imagenes quemas editela
-            val segmentation = YOLO11Segmentation(requireContext())
-            val resultBitmap = segmentation.getPianoKeysFromImage(imageBytes)
+            val resultBitmap = segmentation!!.getPianoKeysFromImage(imageBytes, frameCapturedPianoAreaPercentage)
 //            print(resultBitmap)
 
 

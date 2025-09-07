@@ -35,7 +35,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     private fun loadModel(): Boolean {
         return try {
-            val modelBytes = context.assets.open("yolo11s-seg-aug.onnx").use { it.readBytes() }
+            val modelBytes = context.assets.open("yolo11n-seg-custom.onnx").use { it.readBytes() }
             ortSession = ortEnv.createSession(modelBytes, OrtSession.SessionOptions())
             println("ONNX model loaded successfully")
             true
@@ -50,9 +50,8 @@ class YOLO11Segmentation(private val context: Context) {
      * Preprocess: letterbox-like: scale image to width=modelSize, keep aspect, pad bottom if needed (same as Python).
      * Returns FloatBuffer (NCHW) and pair(originalWidth, originalHeight).
      */
-    private fun preprocessImage(originalBitmap: Bitmap): Pair<FloatBuffer, Pair<Int, Int>> {
-        // CAMBIAR ESTO A RECORTAR EL PORCENTAJE QUE SE CALCULA EN CALIBRATECAMERA.....
-        val percentage = 0.3f // Keep top 30%
+    private fun preprocessImage(originalBitmap: Bitmap, pianoAreaPercentage: Float): Pair<FloatBuffer, Pair<Int, Int>> {
+        val percentage = pianoAreaPercentage // Porcentaje del piano dinamico
         val cropHeight = (originalBitmap.height * percentage).toInt()
         val bitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, cropHeight)
 
@@ -265,9 +264,8 @@ class YOLO11Segmentation(private val context: Context) {
 
         // Upscale to original image size (use bilinear to keep edges smoother)
         val up = protoBmp.scale(originalWidth, originalWidth, true)
+        protoBmp.recycle()
         return up
-//        protoBmp.recycle()
-//
 //        // Threshold to binary mask (tune threshold if necessary)
 //        val finalPixels = IntArray(originalWidth * originalHeight)
 //        up.getPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
@@ -305,14 +303,14 @@ class YOLO11Segmentation(private val context: Context) {
     /**
      * Run full pipeline on a Bitmap and return final mask bitmap (white object on black background).
      */
-    fun processImage(bitmap: Bitmap): Bitmap {
+    fun processImage(bitmap: Bitmap, pianoAreaPercentage: Float): Bitmap {
         if (ortSession == null) {
             println("ONNX session not loaded!")
             return bitmap.copy(Bitmap.Config.ARGB_8888, true)
         }
 
         try {
-            val (inputBuffer, dims) = preprocessImage(bitmap)
+            val (inputBuffer, dims) = preprocessImage(bitmap, pianoAreaPercentage)
             val (origW, origH) = dims
 
             // Create ONNX tensor (wrap FloatBuffer). Shape [1,3,608,608]
@@ -375,7 +373,7 @@ class YOLO11Segmentation(private val context: Context) {
      * Keep your upload/test helper — reads asset test image and processes it.
      * If you want to use the provided imageBytes instead, just decode them (commented).
      */
-    fun getPianoKeysFromImage(imageBytes: ByteArray?): ByteArray? {
+    fun getPianoKeysFromImage(imageBytes: ByteArray?, pianoAreaPercentage: Float): ByteArray? {
 
         return try {
 
@@ -388,7 +386,7 @@ class YOLO11Segmentation(private val context: Context) {
                 ?: throw Exception("Failed to decode image")
 
             // DESCOMENTAR PARA RERESAR AL OIGINAL
-            val resultBitmap = processImage(bitmap)
+            val resultBitmap = processImage(bitmap, pianoAreaPercentage)
 //            val resultBitmap = preprocessImageTest(bitmap)
 
             val stream = java.io.ByteArrayOutputStream()
