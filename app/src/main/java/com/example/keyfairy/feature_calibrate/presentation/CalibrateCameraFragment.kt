@@ -43,7 +43,7 @@ class CalibrateCameraFragment : Fragment() {
     private var captureRunnable: Runnable? = null
 
     // Segundos para tomar la imagen
-    private val CAPTURE_INTERVAL = 4000L // 1 seconds
+    private val CAPTURE_INTERVAL = 2000L // 1 seconds
 
     private var shouldCaptureFrame = false
 
@@ -202,7 +202,7 @@ class CalibrateCameraFragment : Fragment() {
 
             // Se divide entre 450 debido a que es la medida a la que se ajusta la imagen en python
             // se hace un resize a 450px establecido por la constante RESIZE_WIDTH en calibracion.py
-            val scalingRatio = previewView.width / 600f
+            val scalingRatio = previewView.width / 608f
 
             // Utilizamos regla de 3 para obtener la altura real del previewView, conocemos su ancho y las medidas
             // Resultantes del frame capturado (ancho y alto) que es la variable <image>
@@ -211,9 +211,10 @@ class CalibrateCameraFragment : Fragment() {
             // Debido a como android ajusta la imagen a la pantalla), podemos obtener el porcentaje
             // Que corresponde al area del piano.
             val frameCapturedPianoAreaPercentage = pianoAreaSection.height / phonePreviewTotalHeight
+            println(frameCapturedPianoAreaPercentage)
 
             val out = ByteArrayOutputStream()
-            yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 90, out)
+            yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
             val imageBytes = out.toByteArray()
 
             val py = Python.getInstance()
@@ -228,11 +229,6 @@ class CalibrateCameraFragment : Fragment() {
             val segmentation = YOLO11Segmentation(requireContext())
             val resultBitmap = segmentation.getPianoKeysFromImage(imageBytes)
 //            print(resultBitmap)
-
-
-
-
-
 
 
             val rsp = module.callAttr("is_calibrated", resultBitmap, frameCapturedPianoAreaPercentage, context).toString() // Get JSON string

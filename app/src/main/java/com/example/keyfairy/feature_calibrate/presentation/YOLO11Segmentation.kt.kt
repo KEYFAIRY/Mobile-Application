@@ -19,7 +19,6 @@ class YOLO11Segmentation(private val context: Context) {
 
     private val modelSize = 608               // model input W (=608)
     private val confThreshold = 0.7f
-    private val iouThreshold = 0.8f
     private val maskH = 152                   // prototype H
     private val maskW = 152                   // prototype W
     private val numMasks = 32                 // prototype channels
@@ -36,7 +35,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     private fun loadModel(): Boolean {
         return try {
-            val modelBytes = context.assets.open("yolo11s-seg-keys-nms.onnx").use { it.readBytes() }
+            val modelBytes = context.assets.open("yolo11s-seg-aug.onnx").use { it.readBytes() }
             ortSession = ortEnv.createSession(modelBytes, OrtSession.SessionOptions())
             println("ONNX model loaded successfully")
             true
@@ -51,7 +50,12 @@ class YOLO11Segmentation(private val context: Context) {
      * Preprocess: letterbox-like: scale image to width=modelSize, keep aspect, pad bottom if needed (same as Python).
      * Returns FloatBuffer (NCHW) and pair(originalWidth, originalHeight).
      */
-    private fun preprocessImage(bitmap: Bitmap): Pair<FloatBuffer, Pair<Int, Int>> {
+    private fun preprocessImage(originalBitmap: Bitmap): Pair<FloatBuffer, Pair<Int, Int>> {
+        // CAMBIAR ESTO A RECORTAR EL PORCENTAJE QUE SE CALCULA EN CALIBRATECAMERA.....
+        val percentage = 0.3f // Keep top 30%
+        val cropHeight = (originalBitmap.height * percentage).toInt()
+        val bitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, cropHeight)
+
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
 
@@ -82,7 +86,7 @@ class YOLO11Segmentation(private val context: Context) {
         println(scaledHeight)
         // Calculate position to center the scaled image
         val left = (modelSize - scaledWidth) / 2f
-        val top = 0f
+        val top = 0f  // Center vertically instead of top-aligning
 
         println("Padding - left: $left, top: $top")
 
@@ -119,6 +123,10 @@ class YOLO11Segmentation(private val context: Context) {
     }
 
     private fun preprocessImageTest(bitmap: Bitmap): Bitmap {
+
+        val percentage = 0.3f // Keep top 30%
+        val cropHeight = (bitmap.height * percentage).toInt()
+        val bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, cropHeight)
 
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
@@ -218,32 +226,6 @@ class YOLO11Segmentation(private val context: Context) {
         return Pair(detections, maskPrototypes)
     }
 
-    private fun calculateIoU(det1: Detection, det2: Detection): Float {
-        val x1 = det1.bbox[0]
-        val y1 = det1.bbox[1]
-        val x2 = det1.bbox[2]
-        val y2 = det1.bbox[3]
-        val xa1 = det2.bbox[0]
-        val ya1 = det2.bbox[1]
-        val xa2 = det2.bbox[2]
-        val ya2 = det2.bbox[3]
-        val xi1 = max(x1, xa1)
-        val yi1 = max(y1, ya1)
-        val xi2 = min(x2, xa2)
-        val yi2 = min(y2, ya2)
-        val inter = max(0f, xi2 - xi1) * max(0f, yi2 - yi1)
-        val area1 = (x2 - x1) * (y2 - y1)
-        val area2 = (xa2 - xa1) * (ya2 - ya1)
-        return if (area1 + area2 - inter <= 0f) 0f else inter / (area1 + area2 - inter)
-    }
-
-    /** sigmoid helper */
-    private fun sigmoid(x: Float): Float = 1f / (1f + exp(-x))
-
-    /**
-     * Generate final mask bitmap (binary white object / black background).
-     * maskPrototypes layout assumed CHANNELS-FIRST: [numMasks, maskH, maskW]
-     */
     private fun generateMask(
         maskCoeffs: FloatArray,
         maskPrototypes: FloatArray,
@@ -282,40 +264,42 @@ class YOLO11Segmentation(private val context: Context) {
         protoBmp.setPixels(protoPixels, 0, maskW, 0, 0, maskW, maskH)
 
         // Upscale to original image size (use bilinear to keep edges smoother)
-        val up = protoBmp.scale(originalWidth, originalHeight, true)
-        protoBmp.recycle()
-
-        // Threshold to binary mask (tune threshold if necessary)
-        val finalPixels = IntArray(originalWidth * originalHeight)
-        up.getPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
-        val thresh = 0.5f
-        for (i in finalPixels.indices) {
-            val v = Color.red(finalPixels[i])
-            finalPixels[i] = if (v / 255f > thresh) Color.WHITE else Color.BLACK
-        }
-
-        // Enforce bbox strict mask: outside bbox -> background (black)
-        // Clamp bbox coords to integer image bounds:
-        val x1 = bbox[0].toInt().coerceIn(0, originalWidth - 1)
-        val y1 = bbox[1].toInt().coerceIn(0, originalHeight - 1)
-        val x2 = bbox[2].toInt().coerceIn(0, originalWidth - 1)
-        val y2 = bbox[3].toInt().coerceIn(0, originalHeight - 1)
-
-        for (y in 0 until originalHeight) {
-            val rowOff = y * originalWidth
-            val insideY = y in y1..y2
-            for (x in 0 until originalWidth) {
-                if (!insideY || x < x1 || x > x2) {
-                    finalPixels[rowOff + x] = Color.BLACK
-                }
-            }
-        }
-
-        val maskBitmap = createBitmap(originalWidth, originalHeight)
-        maskBitmap.setPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
-        up.recycle()
-
-        return maskBitmap
+        val up = protoBmp.scale(originalWidth, originalWidth, true)
+        return up
+//        protoBmp.recycle()
+//
+//        // Threshold to binary mask (tune threshold if necessary)
+//        val finalPixels = IntArray(originalWidth * originalHeight)
+//        up.getPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
+//        val thresh = 0.5f
+//        for (i in finalPixels.indices) {
+//            val v = Color.red(finalPixels[i])
+//            finalPixels[i] = if (v / 255f > thresh) Color.WHITE else Color.BLACK
+//        }
+//
+//        // Enforce bbox strict mask: outside bbox -> background (black)
+//        // Clamp bbox coords to integer image bounds:
+//        val x1 = bbox[0].toInt().coerceIn(0, originalWidth - 1)
+//        val y1 = bbox[1].toInt().coerceIn(0, originalHeight - 1)
+//        val x2 = bbox[2].toInt().coerceIn(0, originalWidth - 1)
+//        val y2 = bbox[3].toInt().coerceIn(0, originalHeight - 1)
+//
+//        for (y in 0 until originalHeight) {
+//            val rowOff = y * originalWidth
+//            val insideY = y in y1..y2
+//            for (x in 0 until originalWidth) {
+//                if (!insideY || x < x1 || x > x2) {
+//                    finalPixels[rowOff + x] = Color.BLACK
+//                }
+//            }
+//        }
+//        val maskBitmap = createBitmap(originalWidth, originalHeight)
+//        maskBitmap.setPixels(finalPixels, 0, originalWidth, 0, 0, originalWidth, originalHeight)
+//        val pythonCornerDetectorExpectedImage = maskBitmap.scale(originalWidth, originalWidth, true)
+//        up.recycle()
+////        maskBitmap.recycle()
+//
+//        return maskBitmap
     }
 
     /**
@@ -396,11 +380,11 @@ class YOLO11Segmentation(private val context: Context) {
         return try {
 
             val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/68.jpg")
+            val inputStream = assetManager.open("test_images/76.jpg")
             val byteArrayMocked = inputStream.readBytes()
             inputStream.close()
 
-            val bitmap = BitmapFactory.decodeByteArray(byteArrayMocked, 0, byteArrayMocked.size)
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
                 ?: throw Exception("Failed to decode image")
 
             // DESCOMENTAR PARA RERESAR AL OIGINAL
