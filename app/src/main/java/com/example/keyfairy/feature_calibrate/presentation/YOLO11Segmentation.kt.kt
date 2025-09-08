@@ -51,6 +51,8 @@ class YOLO11Segmentation(private val context: Context) {
      * Returns FloatBuffer (NCHW) and pair(originalWidth, originalHeight).
      */
     private fun preprocessImage(originalBitmap: Bitmap, pianoAreaPercentage: Float): Pair<FloatBuffer, Pair<Int, Int>> {
+        println("Origina image size: ${originalBitmap.width}x${originalBitmap.height}")
+
         val percentage = pianoAreaPercentage // Porcentaje del piano dinamico
         val cropHeight = (originalBitmap.height * percentage).toInt()
         val bitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, cropHeight)
@@ -58,7 +60,7 @@ class YOLO11Segmentation(private val context: Context) {
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
 
-        println("Original image size: ${originalWidth}x${originalHeight}")
+        println("Modded image size: ${originalWidth}x${originalHeight}")
         println("Target model size: ${modelSize}x${modelSize}")
 
         // Calculate scaling factor to fit image within target size while maintaining aspect ratio

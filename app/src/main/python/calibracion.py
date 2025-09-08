@@ -12,12 +12,15 @@ RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.025)
 
 
-def is_calibrated(byte_array_image, piano_area_percentage, context):
+def is_calibrated(byte_array_image, piano_area_percentage, heightToWidthRatio, context):
 
     def instruction_command(corners, image_height):
         # Rango de tolerancia que determina si el piano esta recto o no.
-        straight_inferior_corners_tolerance = int(image_height * 0.1)
+        straight_inferior_corners_tolerance = int(image_height * 0.2)
         bottom_side_limit = image_height - PIANO_AREA_YSECTION_OFFSET
+
+        print(f"BOTTOM SIDE LIMIT: {bottom_side_limit}")
+
         corner_xy_tuples = []
         for corner in corners:
             x, y = corner.ravel()
@@ -144,9 +147,10 @@ def is_calibrated(byte_array_image, piano_area_percentage, context):
 
 # Get image dimensions
     original_height, original_width = raw_frame.shape[:2]
+    taken_image_height = int(original_width * heightToWidthRatio)
 
     # Calculate the number of pixels to keep
-    keep_height = int(original_height * piano_area_percentage)
+    keep_height = int(taken_image_height * piano_area_percentage)
     # Crop from top (remove piano_area_percentage% from top)
     cropped_frame = raw_frame[:keep_height, :]
 
@@ -157,6 +161,10 @@ def is_calibrated(byte_array_image, piano_area_percentage, context):
     new_height = int(original_height * aspect_ratio)
 
     img = cv2.resize(cropped_frame, (RESIZE_WIDTH, new_height))
+
+    resized_height, resized_width = img.shape[:2]
+    print(f"new height: {new_height}")
+    print(f"reized height: {resized_height}")
 
 
     # if new_height < RESIZE_WIDTH:
@@ -206,7 +214,7 @@ def is_calibrated(byte_array_image, piano_area_percentage, context):
     hull = cv2.convexHull(c)
     #
     # Se crea un lienzo negro
-    drawing = np.zeros((original_height, original_width), np.uint8)
+    drawing = np.zeros((new_height, RESIZE_WIDTH), np.uint8)
     #
     # Definimos colores para dibujar sobre el lienzo
     color_hull = (255, 255, 255) # blanco
@@ -237,6 +245,21 @@ def is_calibrated(byte_array_image, piano_area_percentage, context):
         minDistance=30,
         useHarrisDetector=False
     )
+
+    drawing_height, drawing_width = drawing.shape[:2]
+    print(f"drawing height: {drawing_height}")
+
+    cv2.line(drawing, (0, 129), (drawing.shape[1], 129), (255, 255, 255), 2)
+
+    # files_dir = str(context.getFilesDir())
+    #
+    # # Define image file path
+    # img_path = os.path.join(files_dir, "my_image.jpg")
+    #
+    # # Save image to the path
+    # cv2.imwrite(img_path, drawing)
+    #
+    # return
 
     if corners_st is not None:
 
