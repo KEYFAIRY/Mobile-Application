@@ -368,6 +368,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     fun getPianoKeysFromImage(imageBytes: ByteArray?, pianoAreaPercentage: Float): ByteArray? {
 
+
         return try {
 
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
