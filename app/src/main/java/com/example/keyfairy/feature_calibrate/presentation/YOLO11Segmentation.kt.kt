@@ -7,8 +7,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import java.nio.FloatBuffer
 import kotlin.math.exp
-import kotlin.math.max
-import kotlin.math.min
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 
@@ -96,7 +94,6 @@ class YOLO11Segmentation(private val context: Context) {
 
         println("Padding Dim: ${canvas.width}x${canvas.height}")
 
-        // Convert to NCHW float array normalized to [0,1]
         val total = 1 * 3 * modelSize * modelSize
         val floatArr = FloatArray(total)
         val pixels = IntArray(modelSize * modelSize)
@@ -221,8 +218,6 @@ class YOLO11Segmentation(private val context: Context) {
             )
         }
 
-        // The model already applied NMS in-export, but keep a safety check (optional):
-        // if you trust model NMS completely you can skip this step.
         println("Detections before optional filter: ${detections.size}")
         return Pair(detections, maskPrototypes)
     }
@@ -371,18 +366,9 @@ class YOLO11Segmentation(private val context: Context) {
         }
     }
 
-    /**
-     * Keep your upload/test helper — reads asset test image and processes it.
-     * If you want to use the provided imageBytes instead, just decode them (commented).
-     */
     fun getPianoKeysFromImage(imageBytes: ByteArray?, pianoAreaPercentage: Float): ByteArray? {
 
         return try {
-
-            val assetManager = context.assets      // 'context' can be 'this' if inside an Activity
-            val inputStream = assetManager.open("test_images/76.jpg")
-            val byteArrayMocked = inputStream.readBytes()
-            inputStream.close()
 
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
                 ?: throw Exception("Failed to decode image")
