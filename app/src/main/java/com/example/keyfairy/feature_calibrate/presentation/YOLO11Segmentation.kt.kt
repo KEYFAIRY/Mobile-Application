@@ -49,7 +49,7 @@ class YOLO11Segmentation(private val context: Context) {
      * Returns FloatBuffer (NCHW) and pair(originalWidth, originalHeight).
      */
     private fun preprocessImage(originalBitmap: Bitmap, pianoAreaPercentage: Float): Pair<FloatBuffer, Pair<Int, Int>> {
-        println("Origina image size: ${originalBitmap.width}x${originalBitmap.height}")
+//        println("Origina image size: ${originalBitmap.width}x${originalBitmap.height}")
 
         val percentage = pianoAreaPercentage // Porcentaje del piano dinamico
         val cropHeight = (originalBitmap.height * percentage).toInt()
@@ -58,8 +58,8 @@ class YOLO11Segmentation(private val context: Context) {
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
 
-        println("Modded image size: ${originalWidth}x${originalHeight}")
-        println("Target model size: ${modelSize}x${modelSize}")
+//        println("Modded image size: ${originalWidth}x${originalHeight}")
+//        println("Target model size: ${modelSize}x${modelSize}")
 
         // Calculate scaling factor to fit image within target size while maintaining aspect ratio
         val scale = minOf(
@@ -71,7 +71,7 @@ class YOLO11Segmentation(private val context: Context) {
         val scaledWidth = (originalWidth * scale).toInt()
         val scaledHeight = (originalHeight * scale).toInt()
 
-        println("Scaled dimensions: ${scaledWidth}x${scaledHeight}")
+//        println("Scaled dimensions: ${scaledWidth}x${scaledHeight}")
 
         // First, resize the bitmap maintaining aspect ratio
         val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight, true)
@@ -82,17 +82,17 @@ class YOLO11Segmentation(private val context: Context) {
 
         // Fill with black background
         canvas.drawColor(Color.BLACK)
-        println(scaledHeight)
+//        println(scaledHeight)
         // Calculate position to center the scaled image
         val left = (modelSize - scaledWidth) / 2f
         val top = 0f  // Center vertically instead of top-aligning
 
-        println("Padding - left: $left, top: $top")
+//        println("Padding - left: $left, top: $top")
 
         // Draw the scaled image centered on the black background
         canvas.drawBitmap(scaledBitmap, left, top, null)
 
-        println("Padding Dim: ${canvas.width}x${canvas.height}")
+//        println("Padding Dim: ${canvas.width}x${canvas.height}")
 
         val total = 1 * 3 * modelSize * modelSize
         val floatArr = FloatArray(total)
@@ -218,7 +218,7 @@ class YOLO11Segmentation(private val context: Context) {
             )
         }
 
-        println("Detections before optional filter: ${detections.size}")
+//        println("Detections before optional filter: ${detections.size}")
         return Pair(detections, maskPrototypes)
     }
 
@@ -317,16 +317,16 @@ class YOLO11Segmentation(private val context: Context) {
             // Run and ensure outputs/results are closed
             ortSession!!.run(mapOf(ortSession!!.inputNames.first() to inputTensor)).use { results ->
                 // results[0] -> predictions tensor ; results[1] -> mask prototypes
-                println("Number of outputs: ${results.size()}")
+//                println("Number of outputs: ${results.size()}")
                 for (i in 0 until results.size()) {
                     val tensor = results[i] as OnnxTensor
-                    println("Output $i shape: ${tensor.info.shape?.contentToString()}")
-                    println("Output $i name: ${ortSession!!.outputNames.toList()[i]}")
+//                    println("Output $i shape: ${tensor.info.shape?.contentToString()}")
+//                    println("Output $i name: ${ortSession!!.outputNames.toList()[i]}")
                 }
                 val predTensor = results[0] as OnnxTensor
                 val protoTensor = results[1] as OnnxTensor
                 val shape = protoTensor.info.shape
-                println("Mask prototype output shape: ${shape?.contentToString()}")
+//                println("Mask prototype output shape: ${shape?.contentToString()}")
 
                 // Read predictions into float array
                 val predBuf = predTensor.floatBuffer
@@ -353,7 +353,7 @@ class YOLO11Segmentation(private val context: Context) {
 
                 // choose best detection
                 val best = detections.maxByOrNull { it.confidence } ?: return bitmap.copy(Bitmap.Config.ARGB_8888, true)
-                println("Best detection confidence: ${best.confidence}")
+//                println("Best detection confidence: ${best.confidence}")
 
                 // Generate mask
                 val mask = generateMask(best.maskCoeffs, maskProtos, origW, origH, best.bbox)

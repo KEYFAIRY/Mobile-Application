@@ -32,6 +32,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.example.keyfairy.R
 import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.feature_practice_execution.presentation.PracticeExecutionFragment
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -58,12 +59,16 @@ class CalibrateCameraFragment : Fragment() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
 
+
     // Variables reproduccion de audio
     private lateinit var soundPool: SoundPool
     private val soundIds = mutableMapOf<String, Int>()
 
     // Instancia para la segmentacion
     private var segmentation: YOLO11Segmentation? = null
+
+    // Variable para contar alerta de calibracion satisfactoria
+    private var calibratedCounts: Int = 0
 
 
     override fun onCreateView(
@@ -139,17 +144,24 @@ class CalibrateCameraFragment : Fragment() {
                 if (shouldCaptureFrame) {
                     val (command, corners) = imageProxyToCalibrationResult(imageProxy)
                     view?.post {
-                        if (command == "Calibrated" && corners != null) {
-                            Log.i("ATENCION", "CALIBRATION SUCCESS - IMAGE PROCESSED")
-                            drawCornersOnOverlay(corners, true)
-//                            ("-*-*-*-*-*-*-*-*Logica para continuar a la siguiente pantalla una vez la calibracion sea correcta")
-                        }
-                        else if (command == "notCalibrated" && corners != null) {
-                            drawCornersOnOverlay(corners, false)
-                        }
-                        else if (corners != null){
+                        if (corners != null){
                             Log.i("PLAYER", command)
-                            drawCornersOnOverlay(corners, false)
+                            if (command == "calibrado") {
+                                Log.i("ATENCION", "CALIBRATION SUCCESS - IMAGE PROCESSED")
+                                drawCornersOnOverlay(corners, true)
+    //                            ("-*-*-*-*-*-*-*-*Logica para continuar a la siguiente pantalla una vez la calibracion sea correcta")
+                                calibratedCounts++
+                                Log.i("CUENTA", calibratedCounts.toString())
+                                if (calibratedCounts == 4) {
+                                    (activity as? HomeActivity)?.replaceFragment(
+                                        PracticeExecutionFragment())
+                                }
+                            }
+                            else {
+                                calibratedCounts = 0
+                                drawCornersOnOverlay(corners, false)
+                                }
+
                             when (command) {
                                 "arriba" -> playSound("arriba")
                                 "izquierda" -> playSound("izquierda")
@@ -227,11 +239,11 @@ class CalibrateCameraFragment : Fragment() {
 //            val frameCapturedPianoAreaPercentage = pianoAreaSection.height / previewView.width.toFloat()
 
 
-            println(frameCapturedPianoAreaPercentage)
-            println(phonePreviewTotalHeight)
-            println(previewView.width)
-            println(pianoAreaSection.height)
-            println(pianoAreaSection.width)
+//            println(frameCapturedPianoAreaPercentage)
+//            println(phonePreviewTotalHeight)
+//            println(previewView.width)
+//            println(pianoAreaSection.height)
+//            println(pianoAreaSection.width)
 
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)

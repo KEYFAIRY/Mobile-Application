@@ -6,7 +6,7 @@ import os
 RESIZE_WIDTH = 608
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
 PIANO_AREA_XSECTION_OFFSET = int(RESIZE_WIDTH * 0.03)
-PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.025)
+PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.02)
 RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 # Distancia aproximada que realiza el usuario cada vez que hace una correccion
 MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.025)
