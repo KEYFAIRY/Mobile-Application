@@ -175,8 +175,10 @@ class PracticeExecutionFragment : Fragment() {
                     videoCapture
                 )
 
-                Log.d("Camera", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
-                playSound("countdown")
+                Log.d("CameraInsana", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    playSound("countdown")
+                }, 1000) // 500ms delay to ensure sound is loaded
 
             } catch (exc: Exception) {
                 Log.e("Camera", "Camera initialization failed", exc)
