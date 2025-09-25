@@ -47,7 +47,15 @@ class SpeedAndDistanceFragment : Fragment() {
         binding.spinnerNota.adapter = adapterNota
 
         binding.buttonIniciarCalibracion.setOnClickListener {
-            (activity as? HomeActivity)?.replaceFragment(CalibrateFragment())
+            val fragment = CalibrateFragment().apply {
+                arguments = Bundle().apply {
+                    putString("escalaName", nombreEscala)
+                    putInt("escalaNotes", notasEscala.split(",").size)
+                    putInt("octaves", binding.spinnerCantidadEscalas.selectedItem as Int)
+                    putInt("bpm", binding.spinnerMetronomo.selectedItem as Int)
+                }
+            }
+            (activity as? HomeActivity)?.replaceFragment(fragment)
         }
 
         return binding.root

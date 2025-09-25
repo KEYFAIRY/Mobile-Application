@@ -32,6 +32,12 @@ import java.util.concurrent.Executors
 
 class PracticeExecutionFragment : Fragment() {
 
+    // Variables parametro de entrada, datos que el usuario selecciono antes de iniciar la practica
+    private var escalaName: String? = null
+    private var escalaNotes: Int? = null
+    private var octaves: Int? = null
+    private var bpm: Int? = null
+
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 100
         private const val STORAGE_PERMISSION_REQUEST = 101
@@ -54,6 +60,12 @@ class PracticeExecutionFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        arguments?.let { bundle ->
+            escalaName = bundle.getString("escalaName")
+            escalaNotes = bundle.getInt("escalaNotes")
+            octaves = bundle.getInt("octaves")
+            bpm = bundle.getInt("bpm")
+        }
         return inflater.inflate(R.layout.fragment_practice_execution, container, false)
     }
 
@@ -64,6 +76,11 @@ class PracticeExecutionFragment : Fragment() {
         soundPool = SoundPool.Builder().setMaxStreams(1).build()
         // Preload all sounds after the view is created
         preloadSounds()
+
+        Log.i("Name", escalaName.toString())
+        Log.i("Notas", escalaNotes.toString())
+        Log.i("octaves", octaves.toString())
+        Log.i("bpm", bpm.toString())
 
         // Initialize UI components
         previewView = view.findViewById(R.id.previewView)

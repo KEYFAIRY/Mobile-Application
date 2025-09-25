@@ -40,6 +40,12 @@ import org.json.JSONObject
 
 class CalibrateCameraFragment : Fragment() {
 
+    // Variables parametro de entrada, datos que el usuario selecciono antes de iniciar la practica
+    private var escalaName: String? = null
+    private var escalaNotes: Int? = null
+    private var octaves: Int? = null
+    private var bpm: Int? = null
+
     private var captureHandler: Handler? = null
     private var captureRunnable: Runnable? = null
 
@@ -75,6 +81,12 @@ class CalibrateCameraFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        arguments?.let { bundle ->
+            escalaName = bundle.getString("escalaName")
+            escalaNotes = bundle.getInt("escalaNotes")
+            octaves = bundle.getInt("octaves")
+            bpm = bundle.getInt("bpm")
+        }
         return inflater.inflate(R.layout.fragment_calibrate_camera, container, false)
     }
 
@@ -153,8 +165,15 @@ class CalibrateCameraFragment : Fragment() {
                                 calibratedCounts++
                                 Log.i("CUENTA", calibratedCounts.toString())
                                 if (calibratedCounts == 4) {
-                                    (activity as? HomeActivity)?.replaceFragment(
-                                        PracticeExecutionFragment())
+                                    val fragment = PracticeExecutionFragment().apply {
+                                        arguments = Bundle().apply {
+                                            putString("escalaName", escalaName)
+                                            putInt("escalaNotes", escalaNotes as Int)
+                                            putInt("octaves", octaves as Int)
+                                            putInt("bpm", bpm as Int)
+                                        }
+                                    }
+                                    (activity as? HomeActivity)?.replaceFragment(fragment)
                                 }
                             }
                             else {
