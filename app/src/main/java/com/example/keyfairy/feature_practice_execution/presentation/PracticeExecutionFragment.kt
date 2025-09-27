@@ -38,6 +38,9 @@ class PracticeExecutionFragment : Fragment() {
     private var octaves: Int? = null
     private var bpm: Int? = null
 
+    // Variable que contendra la duracion que tendra el video
+    private var videoLength: Long = 0
+
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 100
         private const val STORAGE_PERMISSION_REQUEST = 101
@@ -55,6 +58,8 @@ class PracticeExecutionFragment : Fragment() {
     // Video recording components
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
+        // Determina si ya se esta grabando un video
+    private var isRecordingScheduled = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -77,10 +82,15 @@ class PracticeExecutionFragment : Fragment() {
         // Preload all sounds after the view is created
         preloadSounds()
 
-        Log.i("Name", escalaName.toString())
-        Log.i("Notas", escalaNotes.toString())
-        Log.i("octaves", octaves.toString())
-        Log.i("bpm", bpm.toString())
+
+        val secondsPerNote = (60/(bpm!!).toDouble())
+        // Multiplicamos la cantidad de notas x2, debido a que es ascendente y descendente
+        val numberOfNotes = (((escalaNotes!!-1) * 2) * octaves!!) + 1
+
+        videoLength = ((secondsPerNote * numberOfNotes) * 1000).toLong()
+        // Para evitar cortes del video que interrumpan una nota, agregamos la duracion de una nota segun el bpm
+        videoLength += (secondsPerNote * 1000).toLong()
+        Log.i("VIDEO-LEN", videoLength.toString())
 
         // Initialize UI components
         previewView = view.findViewById(R.id.previewView)
@@ -195,7 +205,14 @@ class PracticeExecutionFragment : Fragment() {
                 Log.d("CameraInsana", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     playSound("countdown")
-                }, 1000) // 500ms delay to ensure sound is loaded
+                }, 1000) // 1000ms delay to ensure sound is loaded
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (!isRecordingScheduled) {
+                        isRecordingScheduled = true
+                        startRecording(videoLength)
+                    }
+                }, 7000)  // 7000ms delay duracion del audio de cuenta regresiva
+
 
             } catch (exc: Exception) {
                 Log.e("Camera", "Camera initialization failed", exc)
@@ -277,7 +294,8 @@ class PracticeExecutionFragment : Fragment() {
 
     private fun stopCamera() {
         try {
-            stopRecording() // Stop any ongoing recording
+            stopRecording()
+            isRecordingScheduled = false // Reset flag
             cameraProvider?.unbindAll()
             cameraProvider = null
             videoCapture = null
