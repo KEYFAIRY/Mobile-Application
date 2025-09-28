@@ -28,6 +28,7 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.example.keyfairy.R
+import com.example.keyfairy.feature_check_video.presentation.CheckVideoFragment
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -68,6 +69,8 @@ class PracticeExecutionFragment : Fragment() {
     private var msPerTick: Long = 0
     private var repeatingSoundHandler: Handler? = null
     private var repeatingSoundRunnable: Runnable? = null
+    // Name of the recorded video
+//    private var videoNameIdentifier: String = ""
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -211,7 +214,7 @@ class PracticeExecutionFragment : Fragment() {
                     videoCapture
                 )
 
-                Log.d("CameraInsana", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
+                Log.d("Camera", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
                 Handler(Looper.getMainLooper()).postDelayed({
                     playSound("countdown")
                 }, 1000) // 1000ms delay to ensure sound is loaded
@@ -233,8 +236,13 @@ class PracticeExecutionFragment : Fragment() {
 
     }
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+
     fun startRecording(durationMillis: Long = 30000) { // Default 30 seconds
+        if (!hasRequiredPermissions()) {
+            Log.e("Permissions", "Cannot start recording - missing permissions")
+            Toast.makeText(requireContext(), "Camera and audio permissions required", Toast.LENGTH_SHORT).show()
+            return
+        }
         val videoCapture = this.videoCapture ?: return
 
         // Create output file
@@ -246,33 +254,63 @@ class PracticeExecutionFragment : Fragment() {
             put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
             put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/KeyFairy")
         }
+//        videoNameIdentifier = "video_$name"
 
         val mediaStoreOutputOptions = MediaStoreOutputOptions
             .Builder(requireContext().contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
             .setContentValues(contentValues)
             .build()
 
-        // Start recording
-        recording = videoCapture.output
-            .prepareRecording(requireContext(), mediaStoreOutputOptions)
-            .withAudioEnabled()  // Add this line to enable audio
-            .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
-                when (recordEvent) {
-                    is VideoRecordEvent.Start -> {
-                        Log.d("VideoRecording", "Recording started")
-                        Toast.makeText(requireContext(), "Recording started", Toast.LENGTH_SHORT).show()
-                    }
-                    is VideoRecordEvent.Finalize -> {
-                        if (!recordEvent.hasError()) {
-                            Log.d("VideoRecording", "Recording saved: ${recordEvent.outputResults.outputUri}")
-                            Toast.makeText(requireContext(), "Video saved successfully", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Log.e("VideoRecording", "Recording error: ${recordEvent.error}")
-                            Toast.makeText(requireContext(), "Recording failed", Toast.LENGTH_SHORT).show()
+
+        try {
+            // Start recording
+            recording = videoCapture.output
+                .prepareRecording(requireContext(), mediaStoreOutputOptions)
+                .withAudioEnabled()  // Add this line to enable audio
+                .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
+                    when (recordEvent) {
+                        is VideoRecordEvent.Start -> {
+                            Log.d("VideoRecording", "Recording started")
+                            Toast.makeText(
+                                requireContext(),
+                                "Recording started",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        is VideoRecordEvent.Finalize -> {
+                            if (!recordEvent.hasError()) {
+                                val videoUri = recordEvent.outputResults.outputUri
+                                Log.d(
+                                    "VideoRecording",
+                                    "Recording saved: ${recordEvent.outputResults.outputUri}"
+                                )
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Video saved successfully",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                val playbackFragment = CheckVideoFragment.newInstance(videoUri)
+                                parentFragmentManager.beginTransaction()
+                                    .replace(R.id.fragment_container, playbackFragment)
+                                    .addToBackStack(null)
+                                    .commit()
+                            } else {
+                                Log.e("VideoRecording", "Recording error: ${recordEvent.error}")
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Recording failed",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     }
                 }
-            }
+        } catch (e: SecurityException) {
+            Log.e("Recording", "SecurityException: ${e.message}")
+            Toast.makeText(requireContext(), "Permission denied for recording", Toast.LENGTH_SHORT).show()
+        }
 
         // Auto-stop recording after specified duration
         Handler(Looper.getMainLooper()).postDelayed({
