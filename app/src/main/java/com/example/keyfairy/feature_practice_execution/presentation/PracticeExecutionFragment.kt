@@ -5,6 +5,8 @@ import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.media.SoundPool
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -12,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.annotation.RequiresPermission
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -61,6 +64,11 @@ class PracticeExecutionFragment : Fragment() {
         // Determina si ya se esta grabando un video
     private var isRecordingScheduled = false
 
+    // Metronome playing variables
+    private var msPerTick: Long = 0
+    private var repeatingSoundHandler: Handler? = null
+    private var repeatingSoundRunnable: Runnable? = null
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -84,6 +92,7 @@ class PracticeExecutionFragment : Fragment() {
 
 
         val secondsPerNote = (60/(bpm!!).toDouble())
+        msPerTick = (secondsPerNote * 1000).toLong()
         // Multiplicamos la cantidad de notas x2, debido a que es ascendente y descendente
         val numberOfNotes = (((escalaNotes!!-1) * 2) * octaves!!) + 1
 
@@ -203,13 +212,14 @@ class PracticeExecutionFragment : Fragment() {
                 )
 
                 Log.d("CameraInsana", "Camera successfully bound to lifecycle with video recording: ${camera != null}")
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                Handler(Looper.getMainLooper()).postDelayed({
                     playSound("countdown")
                 }, 1000) // 1000ms delay to ensure sound is loaded
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                Handler(Looper.getMainLooper()).postDelayed({
                     if (!isRecordingScheduled) {
                         isRecordingScheduled = true
                         startRecording(videoLength)
+                        startMetronome(msPerTick)
                     }
                 }, 7000)  // 7000ms delay duracion del audio de cuenta regresiva
 
@@ -223,6 +233,7 @@ class PracticeExecutionFragment : Fragment() {
 
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startRecording(durationMillis: Long = 30000) { // Default 30 seconds
         val videoCapture = this.videoCapture ?: return
 
@@ -244,6 +255,7 @@ class PracticeExecutionFragment : Fragment() {
         // Start recording
         recording = videoCapture.output
             .prepareRecording(requireContext(), mediaStoreOutputOptions)
+            .withAudioEnabled()  // Add this line to enable audio
             .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
                 when (recordEvent) {
                     is VideoRecordEvent.Start -> {
@@ -263,9 +275,34 @@ class PracticeExecutionFragment : Fragment() {
             }
 
         // Auto-stop recording after specified duration
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        Handler(Looper.getMainLooper()).postDelayed({
             stopRecording()
         }, durationMillis)
+    }
+
+    private fun startMetronome(intervalMs: Long) {
+        stopRepeatingSound() // Stop any existing repeating sound
+
+        repeatingSoundHandler = Handler(Looper.getMainLooper())
+        playSound("metronome_tick")
+        repeatingSoundRunnable = object : Runnable {
+            override fun run() {
+                if (recording != null) { // Only play while recording
+                    playSound("metronome_tick")
+                    repeatingSoundHandler?.postDelayed(this, intervalMs)
+                }
+            }
+        }
+        repeatingSoundHandler?.postDelayed(repeatingSoundRunnable!!, intervalMs)
+    }
+
+    private fun stopRepeatingSound() {
+        repeatingSoundRunnable?.let {
+            repeatingSoundHandler?.removeCallbacks(it)
+        }
+        repeatingSoundHandler?.removeCallbacksAndMessages(null)
+        repeatingSoundHandler = null
+        repeatingSoundRunnable = null
     }
 
     fun stopRecording() {
@@ -285,6 +322,7 @@ class PracticeExecutionFragment : Fragment() {
     }
     private fun preloadSounds() {
         soundIds["countdown"] = loadSound(R.raw.instruccioncuentaregresivasound)
+        soundIds["metronome_tick"] = loadSound(R.raw.metronome_tick)
 
         Log.i("PLAYER", "All calibration sounds preloaded")
     }
