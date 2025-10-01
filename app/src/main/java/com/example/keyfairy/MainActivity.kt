@@ -7,11 +7,8 @@ import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import com.example.keyfairy.feature_auth.presentation.AuthActivity
 import com.example.keyfairy.feature_home.presentation.HomeActivity
-import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
-import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : AppCompatActivity() {
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
