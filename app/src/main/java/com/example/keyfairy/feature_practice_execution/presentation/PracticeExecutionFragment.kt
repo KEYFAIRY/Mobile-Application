@@ -14,7 +14,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.annotation.RequiresPermission
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -28,7 +27,7 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.example.keyfairy.R
-import com.example.keyfairy.feature_check_video.presentation.CheckVideoFragment
+import com.example.keyfairy.feature_check_video.presentation.fragment.CheckVideoFragment
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -269,40 +268,32 @@ class PracticeExecutionFragment : Fragment() {
                 .withAudioEnabled()  // Add this line to enable audio
                 .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
                     when (recordEvent) {
-                        is VideoRecordEvent.Start -> {
-                            Log.d("VideoRecording", "Recording started")
-                            Toast.makeText(
-                                requireContext(),
-                                "Recording started",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-
                         is VideoRecordEvent.Finalize -> {
                             if (!recordEvent.hasError()) {
                                 val videoUri = recordEvent.outputResults.outputUri
-                                Log.d(
-                                    "VideoRecording",
-                                    "Recording saved: ${recordEvent.outputResults.outputUri}"
-                                )
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Video saved successfully",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Log.d("VideoRecording", "Recording saved: ${recordEvent.outputResults.outputUri}")
+                                Toast.makeText(requireContext(), "Video saved successfully", Toast.LENGTH_SHORT).show()
 
-                                val playbackFragment = CheckVideoFragment.newInstance(videoUri)
+                                // Calcular duración del video en segundos
+                                val videoDurationSeconds = (videoLength / 1000).toInt()
+
+                                // Crear fragmento con todos los datos de la práctica
+                                val playbackFragment = CheckVideoFragment.newInstance(
+                                    videoUri = videoUri,
+                                    escalaName = escalaName ?: "C Major",
+                                    escalaNotes = escalaNotes ?: 8,
+                                    octaves = octaves ?: 1,
+                                    bpm = bpm ?: 120,
+                                    videoDurationSeconds = videoDurationSeconds
+                                )
+
                                 parentFragmentManager.beginTransaction()
                                     .replace(R.id.fragment_container, playbackFragment)
                                     .addToBackStack(null)
                                     .commit()
                             } else {
                                 Log.e("VideoRecording", "Recording error: ${recordEvent.error}")
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Recording failed",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(requireContext(), "Recording failed", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
