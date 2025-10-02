@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModelProvider
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.ActivityHomeBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
@@ -20,10 +21,12 @@ import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.feature_practice_execution.presentation.PracticeExecutionFragment
 import com.example.keyfairy.feature_profile.presentation.fragments.ProfileFragment
 import com.example.keyfairy.utils.common.NavigationManager
+import com.example.keyfairy.utils.common.SharedScalesViewModel
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
+    private lateinit var sharedScalesViewModel: SharedScalesViewModel // ✅ ViewModel compartido
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,9 @@ class HomeActivity : AppCompatActivity() {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Inicializar ViewModel compartido y cargar escalas
+        sharedScalesViewModel = ViewModelProvider(this)[SharedScalesViewModel::class.java]
+        sharedScalesViewModel.cargarEscalasIfNeeded(this)
 
         setupBackPressedHandler()
 
@@ -76,6 +82,8 @@ class HomeActivity : AppCompatActivity() {
             }
         }
     }
+
+    fun getSharedScalesViewModel(): SharedScalesViewModel = sharedScalesViewModel
 
     private fun setupBackPressedHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.ViewModelProvider
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentCheckVideoBinding
@@ -32,6 +33,7 @@ class CheckVideoFragment : BaseFragment() {
     private val binding get() = _binding!!
 
     private lateinit var registerPracticeViewModel: RegisterPracticeViewModel
+    private var backPressedCallback: OnBackPressedCallback? = null
 
     private var videoUri: Uri? = null
     private var videoFile: File? = null
@@ -87,6 +89,7 @@ class CheckVideoFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupFullscreenMode()
+        setupBackPressedHandler()
         extractArguments()
         setupViewModel()
         setupVideoPlayer()
@@ -94,8 +97,59 @@ class CheckVideoFragment : BaseFragment() {
         setupClickListeners()
     }
 
+    private fun setupBackPressedHandler() {
+        backPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                Log.d("CheckVideo", "Back button pressed - deleting video and returning")
+                deleteVideoAndReturn()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback!!)
+    }
+
+    private fun deleteVideoAndReturn() {
+        safeNavigate {
+            // Borrar el video original (MediaStore)
+            videoUri?.let { uri ->
+                try {
+                    val deleted = requireContext().contentResolver.delete(uri, null, null)
+                    if (deleted > 0) {
+                        Log.d("CheckVideo", "Original video deleted successfully from MediaStore")
+                    } else {
+                        Log.w("CheckVideo", "Could not delete original video from MediaStore")
+                    }
+                } catch (e: Exception) {
+                    Log.e("CheckVideo", "Error deleting original video: ${e.message}")
+                }
+            }
+
+            // Borrar archivo temporal si existe
+            videoFile?.let { file ->
+                try {
+                    if (file.exists() && file.delete()) {
+                        Log.d("CheckVideo", "Temporary video file deleted successfully")
+                    } else {
+                        Log.w("CheckVideo", "Could not delete temporary video file")
+                    }
+                } catch (e: Exception) {
+                    Log.e("CheckVideo", "Error deleting temporary video file: ${e.message}")
+                }
+            }
+
+            if (isFragmentActive) {
+                Toast.makeText(
+                    requireContext(),
+                    "Video eliminado. Regresando a práctica...",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            // Regresar a PracticeFragment
+            returnToPracticeFragment()
+        }
+    }
+
     private fun setupFullscreenMode() {
-        // Mantener fullscreen mode y bottom navigation oculta
         (activity as? HomeActivity)?.enableFullscreen()
         (activity as? HomeActivity)?.hideBottomNavigation()
     }
@@ -178,10 +232,9 @@ class CheckVideoFragment : BaseFragment() {
                     hideLoading()
                     if (isFragmentActive) {
                         showSuccess("¡Práctica enviada exitosamente! ID: ${state.practiceResult.practiceId}")
-                        // Pequeño delay para que el usuario vea el mensaje de éxito
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                             if (isFragmentActive) {
-                                returnToPracticeFragment()
+                                returnToPracticeFragmentAfterSuccess()
                             }
                         }, 1500)
                     }
@@ -244,7 +297,6 @@ class CheckVideoFragment : BaseFragment() {
             }
         }
 
-        // Navegación lineal: reemplaza sin back stack para volver a calibrar
         navigateAndClearStack(calibrationFragment, R.id.fragment_container)
     }
 
@@ -341,18 +393,26 @@ class CheckVideoFragment : BaseFragment() {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun returnToPracticeFragment() {
+    private fun returnToPracticeFragmentAfterSuccess() {
         safeNavigate {
-            // Restaurar navegación normal
             (activity as? HomeActivity)?.disableFullscreen()
             (activity as? HomeActivity)?.showBottomNavigation()
 
             val practiceFragment = PracticeFragment()
-
-            // Navegación que limpia todo el stack y regresa a PracticeFragment
             navigateAndClearStack(practiceFragment, R.id.fragment_container)
+            (activity as? HomeActivity)?.returnToMainNavigation(practiceFragment)
 
-            // También actualizar la selección del bottom navigation
+            Log.d("CheckVideo", "Navigating back to PracticeFragment after successful upload")
+        }
+    }
+
+    private fun returnToPracticeFragment() {
+        safeNavigate {
+            (activity as? HomeActivity)?.disableFullscreen()
+            (activity as? HomeActivity)?.showBottomNavigation()
+
+            val practiceFragment = PracticeFragment()
+            navigateAndClearStack(practiceFragment, R.id.fragment_container)
             (activity as? HomeActivity)?.returnToMainNavigation(practiceFragment)
 
             Log.d("CheckVideo", "Navigating back to PracticeFragment - Flow completed")
@@ -376,6 +436,10 @@ class CheckVideoFragment : BaseFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Remover el callback del back button
+        backPressedCallback?.remove()
+        backPressedCallback = null
+
         // Limpiar video player
         if (_binding != null) {
             binding.videoView.stopPlayback()
@@ -386,15 +450,17 @@ class CheckVideoFragment : BaseFragment() {
             registerPracticeViewModel.resetState()
         }
 
-        // Limpiar archivo temporal
-        videoFile?.let { file ->
-            try {
-                if (file.exists()) {
-                    file.delete()
-                    Log.d("CheckVideo", "Temporary video file cleaned up")
+        // El back button maneja la limpieza
+        if (!hasNavigatedAway) {
+            videoFile?.let { file ->
+                try {
+                    if (file.exists()) {
+                        file.delete()
+                        Log.d("CheckVideo", "Temporary video file cleaned up in onDestroyView")
+                    }
+                } catch (e: Exception) {
+                    Log.e("CheckVideo", "Error cleaning up temporary file: ${e.message}")
                 }
-            } catch (e: Exception) {
-                Log.e("CheckVideo", "Error cleaning up temporary file: ${e.message}")
             }
         }
 
