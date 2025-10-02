@@ -1,22 +1,22 @@
 package com.example.keyfairy.feature_calibrate.presentation
 
 import android.os.Bundle
-import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
-import com.example.keyfairy.MainActivity
 import com.example.keyfairy.R
-import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.common.navigateAndClearStack
 
-class CalibrateFragment : Fragment() {
+class CalibrateFragment : BaseFragment() {
+
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
+    private var noteType: String? = null
+    private var escalaData: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +25,8 @@ class CalibrateFragment : Fragment() {
             escalaNotes = bundle.getInt("escalaNotes")
             octaves = bundle.getInt("octaves")
             bpm = bundle.getInt("bpm")
+            noteType = bundle.getString("noteType")
+            escalaData = bundle.getString("escala_data")
         }
     }
 
@@ -32,28 +34,37 @@ class CalibrateFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_calibrate, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupClickListeners(view)
+    }
 
-
-
+    private fun setupClickListeners(view: View) {
         val continueButton: Button = view.findViewById(R.id.button_continue)
 
-        // Example: set click listener
         continueButton.setOnClickListener {
-            val fragment = CalibrateCameraFragment().apply {
-                arguments = Bundle().apply {
-                    putString("escalaName", escalaName)
-                    putInt("escalaNotes", escalaNotes as Int)
-                    putInt("octaves", octaves as Int)
-                    putInt("bpm", bpm as Int)
-                }
+            safeNavigate {
+                navigateToCalibrateCameraFragment()
             }
-            (activity as? HomeActivity)?.replaceFragment(fragment)
         }
+    }
+
+    private fun navigateToCalibrateCameraFragment() {
+        val fragment = CalibrateCameraFragment().apply {
+            arguments = Bundle().apply {
+                putString("escalaName", escalaName)
+                putInt("escalaNotes", escalaNotes ?: 0)
+                putInt("octaves", octaves ?: 1)
+                putInt("bpm", bpm ?: 120)
+                putString("noteType", noteType)
+                putString("escala_data", escalaData)
+            }
+        }
+
+        // Navegación lineal: reemplaza sin back stack
+        navigateAndClearStack(fragment, R.id.fragment_container)
     }
 }

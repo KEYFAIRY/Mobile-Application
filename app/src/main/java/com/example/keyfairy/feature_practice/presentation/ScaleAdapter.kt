@@ -9,11 +9,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
 
-class ScaleAdapter(private var listaCompleta: List<String> = emptyList(), private val onPracticeClick: (String) -> Unit) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
-
+class ScaleAdapter(
+    private var listaCompleta: List<String> = emptyList(),
+    private val onPracticeClick: (String) -> Unit
+) : RecyclerView.Adapter<ScaleAdapter.ScaleViewHolder>() {
 
     private var listaFiltrada = listaCompleta.toMutableList()
-
 
     class ScaleViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val escalaCompleta: TextView = view.findViewById(R.id.text_nombre_escala)
@@ -42,7 +43,6 @@ class ScaleAdapter(private var listaCompleta: List<String> = emptyList(), privat
     }
 
     override fun getItemCount() = listaFiltrada.size
-
 
     fun updateData(nuevosDatos: List<String>) {
         listaCompleta = nuevosDatos

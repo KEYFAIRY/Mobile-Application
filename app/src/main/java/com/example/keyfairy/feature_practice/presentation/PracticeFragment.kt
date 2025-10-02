@@ -1,29 +1,23 @@
 package com.example.keyfairy.feature_practice.presentation
 
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.Fragment
+import android.widget.EditText
+import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
-import com.chaquo.python.PyException
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
-import kotlinx.coroutines.Dispatchers
+import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.common.navigateWithBackStack
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import com.example.keyfairy.feature_practice.presentation.ScaleAdapter
-import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
-import android.widget.EditText
-import androidx.core.widget.addTextChangedListener
 
-class PracticeFragment : Fragment() {
+class PracticeFragment : BaseFragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var escalasAdapter: ScaleAdapter
@@ -39,43 +33,96 @@ class PracticeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupRecyclerView(view)
+        setupViewModel()
+        setupObservers()
+        setupSearchFilter(view)
+
+        loadScales()
+    }
+
+    private fun setupRecyclerView(view: View) {
         recyclerView = view.findViewById(R.id.recycler_view_escalas)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         escalasAdapter = ScaleAdapter(emptyList()) { escalaSeleccionada ->
-            val fragment = SpeedAndDistanceFragment().apply {
-                arguments = Bundle().apply {
-                    putString("escala_data", escalaSeleccionada)
+            safeNavigate {
+                val fragment = SpeedAndDistanceFragment().apply {
+                    arguments = Bundle().apply {
+                        putString("escala_data", escalaSeleccionada)
+                    }
                 }
+                navigateWithBackStack(fragment, R.id.fragment_container)
             }
-
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .addToBackStack(null)
-                .commit()
         }
         recyclerView.adapter = escalasAdapter
+    }
 
-        viewModel = androidx.lifecycle.ViewModelProvider(requireActivity())[PracticeViewModel::class.java]
+    private fun setupViewModel() {
+        viewModel = ViewModelProvider(this)[PracticeViewModel::class.java]
+    }
 
-        lifecycleScope.launchWhenStarted {
+    private fun setupObservers() {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.escalas.collect { listaEscalas ->
-                listaCompletaEscalas = listaEscalas
-                escalasAdapter.updateData(listaCompletaEscalas)
+                if (isFragmentActive) {
+                    listaCompletaEscalas = listaEscalas
+                    escalasAdapter.updateData(listaCompletaEscalas)
+                    Log.d("PracticeFragment", "Escalas actualizadas: ${listaEscalas.size} elementos")
+                }
             }
         }
+    }
 
+    private fun setupSearchFilter(view: View) {
         val filtroInput = view.findViewById<EditText>(R.id.editTextFiltro)
         filtroInput.addTextChangedListener { editable ->
-            val textoFiltro = editable.toString().trim()
-            Log.d("PracticeFragment", "Filtro cambiado: $textoFiltro")
-            escalasAdapter.filtrarPorNota(textoFiltro)
+            if (isFragmentActive) {
+                val textoFiltro = editable.toString().trim()
+                Log.d("PracticeFragment", "Filtro cambiado: $textoFiltro")
+                escalasAdapter.filtrarPorNota(textoFiltro)
+            }
+        }
+    }
+
+    private fun loadScales() {
+        if (isFragmentActive && ::viewModel.isInitialized) {
+            Log.d("PracticeFragment", "Cargando escalas...")
+            viewModel.cargarEscalas(requireContext())
         }
     }
 
     override fun onResume() {
         super.onResume()
-        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        if (isFragmentActive) {
+            requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+
+        if (listaCompletaEscalas.isEmpty()) {
+            loadScales()
+        }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Limpiar el filtro si se navega fuera del fragment
+        if (hasNavigatedAway) {
+            view?.findViewById<EditText>(R.id.editTextFiltro)?.setText("")
+        }
+    }
+
+    fun refreshData() {
+        if (isFragmentActive && ::viewModel.isInitialized) {
+            Log.d("PracticeFragment", "Refrescando datos de escalas...")
+            viewModel.cargarEscalas(requireContext())
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Limpiar referencias
+        if (::recyclerView.isInitialized) {
+            recyclerView.adapter = null
+        }
+    }
 }

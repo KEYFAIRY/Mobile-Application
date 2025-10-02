@@ -7,21 +7,26 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentCheckVideoBinding
+import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
 import com.example.keyfairy.feature_check_video.data.repository.PracticeRepositoryImpl
 import com.example.keyfairy.feature_check_video.domain.model.Practice
 import com.example.keyfairy.feature_check_video.domain.use_case.RegisterPracticeUseCase
 import com.example.keyfairy.feature_check_video.presentation.state.RegisterPracticeState
 import com.example.keyfairy.feature_check_video.presentation.viewmodel.RegisterPracticeViewModel
 import com.example.keyfairy.feature_check_video.presentation.viewmodel.RegisterPracticeViewModelFactory
+import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.feature_practice.presentation.PracticeFragment
+import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.common.navigateAndClearStack
 import com.example.keyfairy.utils.storage.SecureStorage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CheckVideoFragment : Fragment() {
+class CheckVideoFragment : BaseFragment() {
 
     private var _binding: FragmentCheckVideoBinding? = null
     private val binding get() = _binding!!
@@ -31,12 +36,12 @@ class CheckVideoFragment : Fragment() {
     private var videoUri: Uri? = null
     private var videoFile: File? = null
 
-
-    // Practice data from previous fragment
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
+    private var noteType: String? = null
+    private var escalaData: String? = null
     private var videoDurationSeconds: Int = 0
 
     companion object {
@@ -81,11 +86,18 @@ class CheckVideoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupFullscreenMode()
         extractArguments()
         setupViewModel()
         setupVideoPlayer()
         setupObservers()
         setupClickListeners()
+    }
+
+    private fun setupFullscreenMode() {
+        // Mantener fullscreen mode y bottom navigation oculta
+        (activity as? HomeActivity)?.enableFullscreen()
+        (activity as? HomeActivity)?.hideBottomNavigation()
     }
 
     private fun extractArguments() {
@@ -96,15 +108,18 @@ class CheckVideoFragment : Fragment() {
             octaves = bundle.getInt(ARG_OCTAVES)
             bpm = bundle.getInt(ARG_BPM)
             videoDurationSeconds = bundle.getInt(ARG_VIDEO_DURATION)
+            noteType = bundle.getString("noteType")
+            escalaData = bundle.getString("escala_data")
         }
 
         if (videoUri == null) {
-            Toast.makeText(requireContext(), "No video to display", Toast.LENGTH_SHORT).show()
-            parentFragmentManager.popBackStack()
+            if (isFragmentActive) {
+                Toast.makeText(requireContext(), "No video to display", Toast.LENGTH_SHORT).show()
+                returnToPracticeFragment()
+            }
             return
         }
 
-        // URI -> File
         videoFile = uriToFile(videoUri!!)
     }
 
@@ -122,26 +137,29 @@ class CheckVideoFragment : Fragment() {
             mediaController.setAnchorView(binding.videoView)
             binding.videoView.setMediaController(mediaController)
 
-            // ✅ SOLUCIÓN: Configurar rotación del VideoView
             binding.videoView.setVideoURI(uri)
 
             binding.videoView.setOnPreparedListener { mediaPlayer ->
                 Log.d("VideoPlayback", "Video prepared and ready to play")
 
-                // ✅ SOLUCIÓN: Ajustar orientación del video
                 try {
-                    // El video ya debería estar en landscape gracias a la rotación en la grabación
-                    mediaPlayer.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                    mediaPlayer.setVideoScalingMode(
+                        android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                    )
                 } catch (e: Exception) {
                     Log.e("VideoPlayback", "Error setting video scaling: ${e.message}")
                 }
 
-                binding.videoView.start()
+                if (isFragmentActive) {
+                    binding.videoView.start()
+                }
             }
 
             binding.videoView.setOnErrorListener { _, what, extra ->
                 Log.e("VideoPlayback", "Error playing video: what=$what, extra=$extra")
-                Toast.makeText(requireContext(), "Error playing video", Toast.LENGTH_SHORT).show()
+                if (isFragmentActive) {
+                    Toast.makeText(requireContext(), "Error playing video", Toast.LENGTH_SHORT).show()
+                }
                 true
             }
 
@@ -158,8 +176,15 @@ class CheckVideoFragment : Fragment() {
                 is RegisterPracticeState.Loading -> showLoading()
                 is RegisterPracticeState.Success -> {
                     hideLoading()
-                    showSuccess("¡Práctica enviada exitosamente! ID: ${state.practiceResult.practiceId}")
-                    navigateBack()
+                    if (isFragmentActive) {
+                        showSuccess("¡Práctica enviada exitosamente! ID: ${state.practiceResult.practiceId}")
+                        // Pequeño delay para que el usuario vea el mensaje de éxito
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (isFragmentActive) {
+                                returnToPracticeFragment()
+                            }
+                        }, 1500)
+                    }
                 }
                 is RegisterPracticeState.Error -> {
                     hideLoading()
@@ -172,12 +197,16 @@ class CheckVideoFragment : Fragment() {
     private fun setupClickListeners() {
         // Button retry - deletes the video and retries the practice
         binding.btnSave.setOnClickListener {
-            deleteVideoAndRetry()
+            safeNavigate {
+                deleteVideoAndRetry()
+            }
         }
 
         // Button send - sends the practice to the server
         binding.btnDelete.setOnClickListener {
-            sendPracticeToServer()
+            safeNavigate {
+                sendPracticeToServer()
+            }
         }
     }
 
@@ -187,17 +216,36 @@ class CheckVideoFragment : Fragment() {
                 val deleted = requireContext().contentResolver.delete(uri, null, null)
                 if (deleted > 0) {
                     Log.d("VideoPlayback", "Video deleted successfully")
-                    Toast.makeText(requireContext(), "Video eliminado. Repitiendo práctica...", Toast.LENGTH_SHORT).show()
-                } else {
-                    Log.w("VideoPlayback", "Failed to delete video")
+                    if (isFragmentActive) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Video eliminado. Repitiendo práctica...",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("VideoPlayback", "Error deleting video: ${e.message}")
             }
 
-            // Go back to the previous fragment
-            parentFragmentManager.popBackStack()
+            navigateToCalibration()
         }
+    }
+
+    private fun navigateToCalibration() {
+        val calibrationFragment = CalibrateCameraFragment().apply {
+            arguments = Bundle().apply {
+                putString("escalaName", escalaName)
+                putInt("escalaNotes", escalaNotes ?: 8)
+                putInt("octaves", octaves ?: 1)
+                putInt("bpm", bpm ?: 120)
+                putString("noteType", noteType)
+                putString("escala_data", escalaData)
+            }
+        }
+
+        // Navegación lineal: reemplaza sin back stack para volver a calibrar
+        navigateAndClearStack(calibrationFragment, R.id.fragment_container)
     }
 
     private fun sendPracticeToServer() {
@@ -218,12 +266,11 @@ class CheckVideoFragment : Fragment() {
             return
         }
 
-        // Create Practice object
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
         val practice = Practice(
-            practiceId = 0, // backend will assign this
+            practiceId = 0,
             date = currentDate,
             time = currentTime,
             duration = videoDurationSeconds,
@@ -243,15 +290,17 @@ class CheckVideoFragment : Fragment() {
         return when {
             scaleName.contains("Major", ignoreCase = true) -> "Major"
             scaleName.contains("Minor", ignoreCase = true) -> "Minor"
-            else -> "Major" // Default
+            else -> "Major"
         }
     }
 
     private fun uriToFile(uri: Uri): File? {
         return try {
-            // Create a temporary file in cache
             val inputStream = requireContext().contentResolver.openInputStream(uri)
-            val tempFile = File(requireContext().cacheDir, "practice_video_${System.currentTimeMillis()}.mp4")
+            val tempFile = File(
+                requireContext().cacheDir,
+                "practice_video_${System.currentTimeMillis()}.mp4"
+            )
 
             inputStream?.use { input ->
                 tempFile.outputStream().use { output ->
@@ -267,49 +316,88 @@ class CheckVideoFragment : Fragment() {
     }
 
     private fun showLoading() {
+        if (!isFragmentActive) return
+
         binding.btnDelete.isEnabled = false
         binding.btnSave.isEnabled = false
         binding.btnDelete.text = "Enviando..."
     }
 
     private fun hideLoading() {
+        if (!isFragmentActive) return
+
         binding.btnDelete.isEnabled = true
         binding.btnSave.isEnabled = true
         binding.btnDelete.text = "Enviar"
     }
 
     private fun showError(message: String) {
+        if (!isFragmentActive) return
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
     private fun showSuccess(message: String) {
+        if (!isFragmentActive) return
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun navigateBack() {
-        parentFragmentManager.popBackStack()
-        parentFragmentManager.popBackStack()
+    private fun returnToPracticeFragment() {
+        safeNavigate {
+            // Restaurar navegación normal
+            (activity as? HomeActivity)?.disableFullscreen()
+            (activity as? HomeActivity)?.showBottomNavigation()
+
+            val practiceFragment = PracticeFragment()
+
+            // Navegación que limpia todo el stack y regresa a PracticeFragment
+            navigateAndClearStack(practiceFragment, R.id.fragment_container)
+
+            // También actualizar la selección del bottom navigation
+            (activity as? HomeActivity)?.returnToMainNavigation(practiceFragment)
+
+            Log.d("CheckVideo", "Navigating back to PracticeFragment - Flow completed")
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        // Check if _binding is not null before accessing its members
-        if (_binding != null) {
+        if (_binding != null && isFragmentActive) {
             binding.videoView.pause()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Check if _binding is not null before accessing its members
-        if (_binding != null && !binding.videoView.isPlaying) {
+        if (_binding != null && isFragmentActive && !binding.videoView.isPlaying) {
             binding.videoView.resume()
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        registerPracticeViewModel.resetState()
+
+        // Limpiar video player
+        if (_binding != null) {
+            binding.videoView.stopPlayback()
+        }
+
+        // Limpiar ViewModel state
+        if (::registerPracticeViewModel.isInitialized) {
+            registerPracticeViewModel.resetState()
+        }
+
+        // Limpiar archivo temporal
+        videoFile?.let { file ->
+            try {
+                if (file.exists()) {
+                    file.delete()
+                    Log.d("CheckVideo", "Temporary video file cleaned up")
+                }
+            } catch (e: Exception) {
+                Log.e("CheckVideo", "Error cleaning up temporary file: ${e.message}")
+            }
+        }
+
         _binding = null
     }
 }

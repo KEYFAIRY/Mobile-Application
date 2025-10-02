@@ -9,8 +9,8 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -28,18 +28,22 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.example.keyfairy.R
 import com.example.keyfairy.feature_check_video.presentation.fragment.CheckVideoFragment
+import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.common.navigateAndClearStack
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import android.view.Surface // ← AGREGAR
 
-class PracticeExecutionFragment : Fragment() {
+class PracticeExecutionFragment : BaseFragment() {
 
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
+    private var noteType: String? = null
+    private var escalaData: String? = null
     private var videoLength: Long = 0
 
     companion object {
@@ -56,8 +60,7 @@ class PracticeExecutionFragment : Fragment() {
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
     private var isRecordingScheduled = false
-
-    private var hasNavigated = false
+    private var hasCompletedRecording = false
 
     private var msPerTick: Long = 0
     private var repeatingSoundHandler: Handler? = null
@@ -72,6 +75,8 @@ class PracticeExecutionFragment : Fragment() {
             escalaNotes = bundle.getInt("escalaNotes")
             octaves = bundle.getInt("octaves")
             bpm = bundle.getInt("bpm")
+            noteType = bundle.getString("noteType")
+            escalaData = bundle.getString("escala_data")
         }
         return inflater.inflate(R.layout.fragment_practice_execution, container, false)
     }
@@ -79,18 +84,28 @@ class PracticeExecutionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        hasNavigated = false
-        isRecordingScheduled = false
-
-        setupAudio()
-        calculateVideoLength()
-        setupCamera()
+        setupFullscreenMode()
+        initializeComponents()
 
         if (hasRequiredPermissions()) {
             startCamera()
         } else {
             requestRequiredPermissions()
         }
+    }
+
+    private fun setupFullscreenMode() {
+        (activity as? HomeActivity)?.enableFullscreen()
+        (activity as? HomeActivity)?.hideBottomNavigation()
+    }
+
+    private fun initializeComponents() {
+        hasCompletedRecording = false
+        isRecordingScheduled = false
+
+        setupAudio()
+        calculateVideoLength()
+        setupCamera()
     }
 
     private fun setupAudio() {
@@ -113,17 +128,27 @@ class PracticeExecutionFragment : Fragment() {
     }
 
     private fun hasRequiredPermissions(): Boolean {
-        val cameraGranted = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        val audioGranted = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val cameraGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val audioGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
         return cameraGranted && audioGranted
     }
 
     private fun requestRequiredPermissions() {
         val permissions = mutableListOf<String>()
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED) {
             permissions.add(Manifest.permission.CAMERA)
         }
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
             permissions.add(Manifest.permission.RECORD_AUDIO)
         }
         if (permissions.isNotEmpty()) {
@@ -131,16 +156,25 @@ class PracticeExecutionFragment : Fragment() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             CAMERA_PERMISSION_REQUEST -> {
-                val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                val allGranted = grantResults.isNotEmpty() &&
+                        grantResults.all { it == PackageManager.PERMISSION_GRANTED }
                 if (allGranted) {
                     startCamera()
                 } else {
-                    if (isAdded) {
-                        Toast.makeText(requireContext(), "Permisos de cámara y audio requeridos", Toast.LENGTH_LONG).show()
+                    if (isFragmentActive) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Permisos de cámara y audio requeridos",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
@@ -148,8 +182,8 @@ class PracticeExecutionFragment : Fragment() {
     }
 
     private fun startCamera() {
-        if (!isAdded || isDetached || hasNavigated) {
-            Log.d("Camera", "Fragment not properly attached or already navigated, skipping camera start")
+        if (!isFragmentActive || hasNavigatedAway || hasCompletedRecording) {
+            Log.d("Camera", "Fragment not active or already completed, skipping camera start")
             return
         }
 
@@ -157,29 +191,29 @@ class PracticeExecutionFragment : Fragment() {
 
         cameraProviderFuture.addListener({
             try {
-                if (!isAdded || isDetached || hasNavigated) {
+                if (!isFragmentActive || hasNavigatedAway) {
                     Log.d("Camera", "Fragment became inactive during camera setup")
                     return@addListener
                 }
 
                 cameraProvider = cameraProviderFuture.get()
 
-                // ✅ SOLUCIÓN: Configurar preview con orientación landscape
+                // Configurar preview con orientación landscape
                 val preview = Preview.Builder()
-                    .setTargetRotation(Surface.ROTATION_90) // ← Forzar landscape
+                    .setTargetRotation(Surface.ROTATION_90)
                     .build()
                     .also {
-                        previewView.scaleType = PreviewView.ScaleType.FILL_CENTER // ← Cambiar a FILL_CENTER
+                        previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
-                // ✅ SOLUCIÓN: Configurar recorder con orientación landscape
+                // Configurar recorder con orientación landscape
                 val recorder = Recorder.Builder()
                     .setQualitySelector(QualitySelector.from(Quality.HD))
                     .build()
 
                 videoCapture = VideoCapture.Builder(recorder)
-                    .setTargetRotation(Surface.ROTATION_90) // ← Forzar landscape en grabación
+                    .setTargetRotation(Surface.ROTATION_90)
                     .build()
 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -193,29 +227,35 @@ class PracticeExecutionFragment : Fragment() {
 
             } catch (exc: Exception) {
                 Log.e("Camera", "Camera initialization failed", exc)
-                if (isAdded) {
-                    Toast.makeText(requireContext(), "Error al inicializar cámara: ${exc.message}", Toast.LENGTH_SHORT).show()
+                if (isFragmentActive) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Error al inicializar cámara: ${exc.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
     private fun scheduleRecordingSequence() {
-        if (isRecordingScheduled || hasNavigated) {
-            Log.d("Recording", "Recording already scheduled or navigated away")
+        if (isRecordingScheduled || hasNavigatedAway || hasCompletedRecording) {
+            Log.d("Recording", "Recording already scheduled or fragment inactive")
             return
         }
 
         isRecordingScheduled = true
 
+        // Countdown sound after 1 second
         Handler(Looper.getMainLooper()).postDelayed({
-            if (isAdded && !hasNavigated) {
+            if (isFragmentActive && !hasNavigatedAway) {
                 playSound("countdown")
             }
         }, 1000)
 
+        // Start recording after 7 seconds
         Handler(Looper.getMainLooper()).postDelayed({
-            if (isAdded && !hasNavigated && isRecordingScheduled) {
+            if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
                 startMetronome(msPerTick)
             }
@@ -223,15 +263,19 @@ class PracticeExecutionFragment : Fragment() {
     }
 
     private fun startRecording(durationMillis: Long = 30000) {
-        if (!isAdded || hasNavigated) {
-            Log.d("Recording", "Fragment not attached or already navigated, skipping recording")
+        if (!isFragmentActive || hasNavigatedAway || hasCompletedRecording) {
+            Log.d("Recording", "Fragment not active, skipping recording")
             return
         }
 
         if (!hasRequiredPermissions()) {
             Log.e("Permissions", "Cannot start recording - missing permissions")
-            if (isAdded) {
-                Toast.makeText(requireContext(), "Permisos de cámara y audio requeridos", Toast.LENGTH_SHORT).show()
+            if (isFragmentActive) {
+                Toast.makeText(
+                    requireContext(),
+                    "Permisos de cámara y audio requeridos",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
             return
         }
@@ -261,13 +305,20 @@ class PracticeExecutionFragment : Fragment() {
                 }
         } catch (e: SecurityException) {
             Log.e("Recording", "SecurityException: ${e.message}")
-            if (isAdded) {
-                Toast.makeText(requireContext(), "Permiso denegado para grabación", Toast.LENGTH_SHORT).show()
+            if (isFragmentActive) {
+                Toast.makeText(
+                    requireContext(),
+                    "Permiso denegado para grabación",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
 
+        // Stop recording after duration
         Handler(Looper.getMainLooper()).postDelayed({
-            stopRecording()
+            if (isFragmentActive && !hasNavigatedAway) {
+                stopRecording()
+            }
         }, durationMillis)
     }
 
@@ -275,14 +326,18 @@ class PracticeExecutionFragment : Fragment() {
         when (recordEvent) {
             is VideoRecordEvent.Start -> {
                 Log.d("VideoRecording", "Recording started")
-                if (isAdded) {
-                    Toast.makeText(requireContext(), "Grabación iniciada", Toast.LENGTH_SHORT).show()
+                if (isFragmentActive) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Grabación iniciada",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
 
             is VideoRecordEvent.Finalize -> {
-                if (!isAdded || hasNavigated) {
-                    Log.d("VideoRecording", "Fragment not attached, skipping finalize processing")
+                if (!isFragmentActive || hasNavigatedAway) {
+                    Log.d("VideoRecording", "Fragment not active, skipping finalize processing")
                     return
                 }
 
@@ -290,20 +345,25 @@ class PracticeExecutionFragment : Fragment() {
                     val videoUri = recordEvent.outputResults.outputUri
                     Log.d("VideoRecording", "Recording saved: $videoUri")
 
-                    // ✅ SOLUCIÓN: Marcar que ya navegamos ANTES de navegar
-                    hasNavigated = true
-
-                    // ✅ SOLUCIÓN: Detener TODO antes de navegar
+                    hasCompletedRecording = true
                     stopCamera()
 
-                    if (isAdded) {
-                        Toast.makeText(requireContext(), "Video guardado exitosamente", Toast.LENGTH_SHORT).show()
+                    if (isFragmentActive) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Video guardado exitosamente",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         navigateToCheckVideo(videoUri)
                     }
                 } else {
                     Log.e("VideoRecording", "Recording error: ${recordEvent.error}")
-                    if (isAdded) {
-                        Toast.makeText(requireContext(), "Error en la grabación", Toast.LENGTH_SHORT).show()
+                    if (isFragmentActive) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Error en la grabación",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -311,7 +371,10 @@ class PracticeExecutionFragment : Fragment() {
     }
 
     private fun navigateToCheckVideo(videoUri: android.net.Uri) {
-        try {
+        safeNavigate {
+            stopCamera()
+            stopRepeatingSound()
+
             val videoDurationSeconds = (videoLength / 1000).toInt()
 
             val playbackFragment = CheckVideoFragment.newInstance(
@@ -321,15 +384,13 @@ class PracticeExecutionFragment : Fragment() {
                 octaves = octaves ?: 1,
                 bpm = bpm ?: 120,
                 videoDurationSeconds = videoDurationSeconds
-            )
+            ).apply {
+                arguments?.putString("noteType", noteType)
+                arguments?.putString("escala_data", escalaData)
+            }
 
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, playbackFragment)
-                .addToBackStack(null)
-                .commit()
-
-        } catch (e: Exception) {
-            Log.e("Navigation", "Error navigating to CheckVideoFragment: ${e.message}")
+            // Navegación lineal: continúa el flujo sin back stack
+            navigateAndClearStack(playbackFragment, R.id.fragment_container)
         }
     }
 
@@ -340,7 +401,7 @@ class PracticeExecutionFragment : Fragment() {
         playSound("metronome_tick")
         repeatingSoundRunnable = object : Runnable {
             override fun run() {
-                if (recording != null && isAdded && !hasNavigated) {
+                if (recording != null && isFragmentActive && !hasNavigatedAway) {
                     playSound("metronome_tick")
                     repeatingSoundHandler?.postDelayed(this, intervalMs)
                 }
@@ -361,12 +422,12 @@ class PracticeExecutionFragment : Fragment() {
     private fun stopRecording() {
         recording?.stop()
         recording = null
-        stopRepeatingSound() // ← Detener metrónomo también
+        stopRepeatingSound()
         Log.d("VideoRecording", "Recording stopped")
     }
 
     private fun playSound(command: String) {
-        if (!isAdded || hasNavigated) return
+        if (!isFragmentActive || hasNavigatedAway) return
 
         soundIds[command]?.let { soundId ->
             soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
@@ -379,7 +440,7 @@ class PracticeExecutionFragment : Fragment() {
     private fun preloadSounds() {
         soundIds["countdown"] = loadSound(R.raw.instruccioncuentaregresivasound)
         soundIds["metronome_tick"] = loadSound(R.raw.metronome_tick)
-        Log.i("PLAYER", "All calibration sounds preloaded")
+        Log.i("PLAYER", "All sounds preloaded")
     }
 
     private fun loadSound(resId: Int): Int {
@@ -400,31 +461,40 @@ class PracticeExecutionFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        hasNavigated = true
-        stopCamera()
-        if (this::cameraExecutor.isInitialized) {
-            cameraExecutor.shutdown()
-        }
-        if (this::soundPool.isInitialized) {
-            soundPool.release()
-        }
-    }
-
     override fun onPause() {
         super.onPause()
-        // ✅ SOLUCIÓN: Solo detener si NO hemos navegado (evita re-iniciar en onResume)
-        if (!hasNavigated) {
+        // Solo detener si no hemos navegado (evita problemas en onResume)
+        if (!hasNavigatedAway && !hasCompletedRecording) {
             stopCamera()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // ✅ SOLUCIÓN: Solo reiniciar si NO hemos navegado
-        if (!hasNavigated && hasRequiredPermissions()) {
+        // Solo reiniciar si no hemos completado la grabación y tenemos permisos
+        if (isFragmentActive &&
+            !hasNavigatedAway &&
+            !hasCompletedRecording &&
+            hasRequiredPermissions() &&
+            !isRecordingScheduled) {
+            Log.d("Camera", "Restarting camera in onResume")
             startCamera()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        stopCamera()
+
+        if (this::cameraExecutor.isInitialized) {
+            cameraExecutor.shutdown()
+        }
+
+        if (this::soundPool.isInitialized) {
+            soundPool.release()
+        }
+
+        hasCompletedRecording = false
+        isRecordingScheduled = false
     }
 }
