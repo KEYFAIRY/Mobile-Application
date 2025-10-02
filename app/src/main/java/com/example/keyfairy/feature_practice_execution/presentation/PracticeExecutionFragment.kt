@@ -32,10 +32,10 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import android.view.Surface // ← AGREGAR
 
 class PracticeExecutionFragment : Fragment() {
 
-    // Variables parametro de entrada
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
@@ -46,23 +46,19 @@ class PracticeExecutionFragment : Fragment() {
         private const val CAMERA_PERMISSION_REQUEST = 100
     }
 
-    // Variables reproduccion de audio
     private lateinit var soundPool: SoundPool
     private val soundIds = mutableMapOf<String, Int>()
 
-    // Camera components
     private lateinit var previewView: PreviewView
     private lateinit var cameraExecutor: ExecutorService
     private var cameraProvider: ProcessCameraProvider? = null
 
-    // Video recording components
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
     private var isRecordingScheduled = false
 
     private var hasNavigated = false
 
-    // Metronome playing variables
     private var msPerTick: Long = 0
     private var repeatingSoundHandler: Handler? = null
     private var repeatingSoundRunnable: Runnable? = null
@@ -168,24 +164,30 @@ class PracticeExecutionFragment : Fragment() {
 
                 cameraProvider = cameraProviderFuture.get()
 
+                // ✅ SOLUCIÓN: Configurar preview con orientación landscape
                 val preview = Preview.Builder()
+                    .setTargetRotation(Surface.ROTATION_90) // ← Forzar landscape
                     .build()
                     .also {
-                        previewView.scaleType = PreviewView.ScaleType.FILL_START
+                        previewView.scaleType = PreviewView.ScaleType.FILL_CENTER // ← Cambiar a FILL_CENTER
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
+                // ✅ SOLUCIÓN: Configurar recorder con orientación landscape
                 val recorder = Recorder.Builder()
                     .setQualitySelector(QualitySelector.from(Quality.HD))
                     .build()
 
-                videoCapture = VideoCapture.withOutput(recorder)
+                videoCapture = VideoCapture.Builder(recorder)
+                    .setTargetRotation(Surface.ROTATION_90) // ← Forzar landscape en grabación
+                    .build()
+
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
                 cameraProvider?.unbindAll()
                 cameraProvider?.bindToLifecycle(this, cameraSelector, preview, videoCapture)
 
-                Log.d("Camera", "Camera successfully bound to lifecycle")
+                Log.d("Camera", "Camera successfully bound to lifecycle with landscape orientation")
 
                 scheduleRecordingSequence()
 
@@ -206,16 +208,14 @@ class PracticeExecutionFragment : Fragment() {
 
         isRecordingScheduled = true
 
-        // Countdown sound
         Handler(Looper.getMainLooper()).postDelayed({
             if (isAdded && !hasNavigated) {
                 playSound("countdown")
             }
         }, 1000)
 
-        // Start recording and metronome
         Handler(Looper.getMainLooper()).postDelayed({
-            if (isAdded && !hasNavigated && !isRecordingScheduled.not()) {
+            if (isAdded && !hasNavigated && isRecordingScheduled) {
                 startRecording(videoLength)
                 startMetronome(msPerTick)
             }
@@ -266,7 +266,6 @@ class PracticeExecutionFragment : Fragment() {
             }
         }
 
-        // Auto-stop recording
         Handler(Looper.getMainLooper()).postDelayed({
             stopRecording()
         }, durationMillis)
@@ -291,7 +290,11 @@ class PracticeExecutionFragment : Fragment() {
                     val videoUri = recordEvent.outputResults.outputUri
                     Log.d("VideoRecording", "Recording saved: $videoUri")
 
+                    // ✅ SOLUCIÓN: Marcar que ya navegamos ANTES de navegar
                     hasNavigated = true
+
+                    // ✅ SOLUCIÓN: Detener TODO antes de navegar
+                    stopCamera()
 
                     if (isAdded) {
                         Toast.makeText(requireContext(), "Video guardado exitosamente", Toast.LENGTH_SHORT).show()
@@ -358,6 +361,7 @@ class PracticeExecutionFragment : Fragment() {
     private fun stopRecording() {
         recording?.stop()
         recording = null
+        stopRepeatingSound() // ← Detener metrónomo también
         Log.d("VideoRecording", "Recording stopped")
     }
 
@@ -410,11 +414,15 @@ class PracticeExecutionFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        stopCamera()
+        // ✅ SOLUCIÓN: Solo detener si NO hemos navegado (evita re-iniciar en onResume)
+        if (!hasNavigated) {
+            stopCamera()
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        // ✅ SOLUCIÓN: Solo reiniciar si NO hemos navegado
         if (!hasNavigated && hasRequiredPermissions()) {
             startCamera()
         }

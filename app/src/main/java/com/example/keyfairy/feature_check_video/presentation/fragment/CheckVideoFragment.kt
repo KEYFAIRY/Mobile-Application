@@ -118,17 +118,25 @@ class CheckVideoFragment : Fragment() {
 
     private fun setupVideoPlayer() {
         videoUri?.let { uri ->
-            // Set up media controller for play/pause controls
             val mediaController = android.widget.MediaController(requireContext())
             mediaController.setAnchorView(binding.videoView)
             binding.videoView.setMediaController(mediaController)
 
-            // Set video URI and prepare
+            // ✅ SOLUCIÓN: Configurar rotación del VideoView
             binding.videoView.setVideoURI(uri)
 
             binding.videoView.setOnPreparedListener { mediaPlayer ->
                 Log.d("VideoPlayback", "Video prepared and ready to play")
-                binding.videoView.start() // Auto-play when ready
+
+                // ✅ SOLUCIÓN: Ajustar orientación del video
+                try {
+                    // El video ya debería estar en landscape gracias a la rotación en la grabación
+                    mediaPlayer.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                } catch (e: Exception) {
+                    Log.e("VideoPlayback", "Error setting video scaling: ${e.message}")
+                }
+
+                binding.videoView.start()
             }
 
             binding.videoView.setOnErrorListener { _, what, extra ->
