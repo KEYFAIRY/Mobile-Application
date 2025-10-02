@@ -1,9 +1,10 @@
-package com.example.keyfairy.feature_auth.presentation
+package com.example.keyfairy.feature_auth.presentation.activity
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.example.keyfairy.databinding.ActivityAuthBinding
+import com.example.keyfairy.feature_auth.presentation.fragment.LoginFragment
 
 class AuthActivity : AppCompatActivity() {
 

@@ -5,11 +5,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
-import com.example.keyfairy.feature_auth.presentation.AuthActivity
+import com.example.keyfairy.feature_auth.presentation.activity.AuthActivity
 import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.utils.storage.SecureStorage
 
 class MainActivity : AppCompatActivity() {
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,16 +18,33 @@ class MainActivity : AppCompatActivity() {
         // Simulación de "splash" con 3 segundos de carga
         Handler(Looper.getMainLooper()).postDelayed({
 
-            val isLoggedIn = false // aquí luego pondrás la lógica real
-
-            if (isLoggedIn) {
-                startActivity(Intent(this, HomeActivity::class.java))
-            } else {
-                startActivity(Intent(this, AuthActivity::class.java))
-            }
-
-            finish() // cierra MainActivity
+            checkAuthenticationStatus()
 
         }, 3000) // 3 segundos
+    }
+
+    private fun checkAuthenticationStatus() {
+        // Verificar si el usuario tiene una sesión válida
+        val isLoggedIn = SecureStorage.hasValidSession()
+
+        if (isLoggedIn) {
+            // Usuario autenticado, ir a HomeActivity
+            navigateToHome()
+        } else {
+            // Usuario no autenticado, ir a AuthActivity (login/signup)
+            navigateToAuth()
+        }
+    }
+
+    private fun navigateToHome() {
+        val intent = Intent(this, HomeActivity::class.java)
+        startActivity(intent)
+        finish() // cierra MainActivity
+    }
+
+    private fun navigateToAuth() {
+        val intent = Intent(this, AuthActivity::class.java)
+        startActivity(intent)
+        finish() // cierra MainActivity
     }
 }

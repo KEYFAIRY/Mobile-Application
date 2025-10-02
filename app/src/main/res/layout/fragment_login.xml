@@ -8,7 +8,7 @@
     android:gravity="center_horizontal"
     android:background="@color/white"
     android:padding="24dp"
-    tools:context=".feature_auth.presentation.LoginFragment">
+    tools:context=".feature_auth.presentation.fragment.LoginFragment">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -21,17 +21,12 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
-            <Space
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
             <ImageView
                 android:id="@+id/logo_placeholder"
-                android:layout_width="200dp"
-                android:layout_height="200dp"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
                 android:src="@drawable/keyfairy_logo"
-                android:layout_marginBottom="48dp"/>
+                android:layout_marginBottom="30dp"/>
 
             <TextView
                 android:id="@+id/welcome_title"
@@ -100,11 +95,6 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:layout_gravity="center_horizontal"/>
-
-            <Space
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
 
         </LinearLayout>
     </ScrollView>

@@ -2,6 +2,7 @@ package com.example.keyfairy
 
 import android.app.Application
 import com.example.keyfairy.utils.common.Config
+import com.example.keyfairy.utils.storage.SecureStorage
 
 class KeyFairyApplication : Application() {
 
@@ -10,6 +11,9 @@ class KeyFairyApplication : Application() {
 
         // Initialize configuration
         Config.init(this)
+
+        // Initialize SecureStorage
+        SecureStorage.init(this)
 
         // TODO: Initialize other app-wide components
     }

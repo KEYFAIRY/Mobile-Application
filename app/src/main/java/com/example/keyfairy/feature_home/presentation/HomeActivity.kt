@@ -13,11 +13,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.ActivityHomeBinding
-import com.example.keyfairy.feature_home.presentation.HomeFragment
 import com.example.keyfairy.feature_progress.presentation.ProgressFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeViewModel
-import com.example.keyfairy.feature_profile.presentation.ProfileFragment
+import com.example.keyfairy.feature_profile.presentation.fragments.ProfileFragment
 
 class HomeActivity : AppCompatActivity() {
 

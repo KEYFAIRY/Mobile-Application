@@ -6,12 +6,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    tools:context=".feature_auth.presentation.AuthActivity">
+    tools:context=".feature_auth.presentation.activity.AuthActivity">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:name="com.example.keyfairy.feature_auth.presentation.LoginFragment" />
+        android:name="com.example.keyfairy.feature_auth.presentation.fragment.LoginFragment" />
 
 </RelativeLayout>
