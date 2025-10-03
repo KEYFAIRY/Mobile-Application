@@ -9,4 +9,6 @@
     <color name="dark_red">#771526</color>
     <color name="light_red">#DFB2BA</color>
     <color name="gray">#C0C0C0</color>
+    <color name="orange">#FF9800</color>
+    <color name="blue">#2196F3</color>
 </resources>

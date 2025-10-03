@@ -1,210 +1,241 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5"
-    android:padding="16dp"
+    android:fillViewport="true"
     tools:context=".feature_home.presentation.HomeFragment">
 
-
-    <ImageView
-        android:id="@+id/logo_placeholder"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:src="@drawable/keyfairy_logo"
-        android:contentDescription="@string/app_name"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="24dp" />
-
-    <TextView
-        android:id="@+id/welcome_title"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Bienvenid@ a Keyfairy"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/logo_placeholder"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp" />
+        android:padding="16dp">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/last_scale_card"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        android:layout_marginTop="32dp"
-        android:padding="16dp"
-        android:backgroundTint="#D19C74"
-        app:layout_constraintTop_toBottomOf="@id/welcome_title"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/logo_placeholder"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/keyfairy_logo"
+            android:contentDescription="@string/app_name"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="24dp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/welcome_title"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:text="Bienvenid@ a Keyfairy"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/logo_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tu última escala practicada"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:layout_marginBottom="16dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/calendar_brown"
-                    app:tint="@android:color/white"
-                    android:layout_marginEnd="16dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="12 de mayo 5 pm"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/piano_brown"
-                    app:tint="@android:color/white"
-                    android:layout_marginEnd="16dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Escala Do Mayor"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/star_brown"
-                    app:tint="@android:color/white"
-                    android:layout_marginEnd="16dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="60% postura correcta"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/warning_brown"
-                    app:tint="@android:color/white"
-                    android:layout_marginEnd="16dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="30% correcta ejecución musical"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-
-
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <androidx.cardview.widget.CardView
-        android:id="@+id/correct_position_card"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        android:layout_marginTop="24dp"
-        android:backgroundTint="#B3D9FF"
-        app:layout_constraintTop_toBottomOf="@id/last_scale_card"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/last_scale_card"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_marginTop="32dp"
             android:padding="16dp"
-            android:gravity="center_horizontal">
+            android:backgroundTint="#D19C74"
+            app:layout_constraintTop_toBottomOf="@id/welcome_title"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Posición correcta para tocar piano"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:textColor="@color/dark_blue"/>
-
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tu última escala practicada"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:layout_marginBottom="16dp"/>
 
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentStart="true"
-                    android:layout_marginStart="24dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/calendar_brown"
+                        app:tint="@android:color/white"
+                        android:layout_marginEnd="16dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12 de mayo 5 pm"
+                        android:textColor="@android:color/white"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/piano_brown"
+                        app:tint="@android:color/white"
+                        android:layout_marginEnd="16dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Escala Do Mayor"
+                        android:textColor="@android:color/white"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/star_brown"
+                        app:tint="@android:color/white"
+                        android:layout_marginEnd="16dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="60% postura correcta"
+                        android:textColor="@android:color/white"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/warning_brown"
+                        app:tint="@android:color/white"
+                        android:layout_marginEnd="16dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="30% correcta ejecución musical"
+                        android:textColor="@android:color/white"/>
+                </LinearLayout>
 
-                <ImageView
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentEnd="true"
-                    android:layout_marginEnd="24dp" />
+        <!-- Videos pendientes de subir -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/pending_videos_card"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
+            android:backgroundTint="@color/light_blue"
+            app:layout_constraintTop_toBottomOf="@id/last_scale_card"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
-                <ImageButton
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/arrow_blue2"
-                    android:scaleType="fitCenter"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Anterior" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <ImageButton
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentEnd="true"
-                    android:src="@drawable/arrow_blue"
-                    android:scaleType="fitCenter"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Siguiente" />
-            </RelativeLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/upload_cloud_blue"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/pending_videos_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Videos pendientes de subir"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/dark_blue"/>
+
+                    <TextView
+                        android:id="@+id/pending_count_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:background="@drawable/circle_badge_background"
+                        android:padding="6dp"
+                        android:minWidth="24dp"
+                        android:gravity="center"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- ✅ RecyclerView para videos pendientes -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/pending_videos_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxHeight="300dp"
+                    android:scrollbars="vertical"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone"/>
+
+                <!-- ✅ Mensaje cuando no hay videos pendientes -->
+                <LinearLayout
+                    android:id="@+id/no_pending_videos_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/check_blue"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="¡Todos tus videos están sincronizados!"
+                        android:textColor="@color/dark_blue"
+                        android:textSize="14sp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

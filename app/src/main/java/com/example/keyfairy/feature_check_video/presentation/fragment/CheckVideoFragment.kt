@@ -2,27 +2,24 @@ package com.example.keyfairy.feature_check_video.presentation.fragment
 
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.lifecycle.ViewModelProvider
+import androidx.work.WorkInfo
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentCheckVideoBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
-import com.example.keyfairy.feature_check_video.data.repository.PracticeRepositoryImpl
 import com.example.keyfairy.feature_check_video.domain.model.Practice
-import com.example.keyfairy.feature_check_video.domain.use_case.RegisterPracticeUseCase
-import com.example.keyfairy.feature_check_video.presentation.state.RegisterPracticeState
-import com.example.keyfairy.feature_check_video.presentation.viewmodel.RegisterPracticeViewModel
-import com.example.keyfairy.feature_check_video.presentation.viewmodel.RegisterPracticeViewModelFactory
 import com.example.keyfairy.feature_home.presentation.HomeActivity
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.navigateAndClearStack
 import com.example.keyfairy.utils.storage.SecureStorage
+import com.example.keyfairy.utils.workers.VideoUploadManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,11 +29,12 @@ class CheckVideoFragment : BaseFragment() {
     private var _binding: FragmentCheckVideoBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var registerPracticeViewModel: RegisterPracticeViewModel
     private var backPressedCallback: OnBackPressedCallback? = null
+    private lateinit var videoUploadManager: VideoUploadManager
 
     private var videoUri: Uri? = null
     private var videoFile: File? = null
+    private var workId: UUID? = null
 
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
@@ -89,18 +87,32 @@ class CheckVideoFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupFullscreenMode()
+        setupVideoUploadManager()
         setupBackPressedHandler()
         extractArguments()
-        setupViewModel()
         setupVideoPlayer()
-        setupObservers()
         setupClickListeners()
+    }
+
+    private fun setupFullscreenMode() {
+        (activity as? HomeActivity)?.enableFullscreen()
+        (activity as? HomeActivity)?.hideBottomNavigation()
+    }
+
+    private fun setupVideoUploadManager() {
+        videoUploadManager = VideoUploadManager(requireContext())
     }
 
     private fun setupBackPressedHandler() {
         backPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                Log.d("CheckVideo", "Back button pressed - deleting video and returning")
+                Log.d("CheckVideo", "🔙 Back button pressed - handling cleanup")
+
+                workId?.let { id ->
+                    videoUploadManager.cancelWork(id)
+                    Log.d("CheckVideo", "🚫 Cancelled pending upload work: $id")
+                }
+
                 deleteVideoAndReturn()
             }
         }
@@ -109,49 +121,33 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun deleteVideoAndReturn() {
         safeNavigate {
-            // Borrar el video original (MediaStore)
-            videoUri?.let { uri ->
-                try {
-                    val deleted = requireContext().contentResolver.delete(uri, null, null)
-                    if (deleted > 0) {
-                        Log.d("CheckVideo", "Original video deleted successfully from MediaStore")
-                    } else {
-                        Log.w("CheckVideo", "Could not delete original video from MediaStore")
-                    }
-                } catch (e: Exception) {
-                    Log.e("CheckVideo", "Error deleting original video: ${e.message}")
-                }
-            }
-
-            // Borrar archivo temporal si existe
-            videoFile?.let { file ->
-                try {
-                    if (file.exists() && file.delete()) {
-                        Log.d("CheckVideo", "Temporary video file deleted successfully")
-                    } else {
-                        Log.w("CheckVideo", "Could not delete temporary video file")
-                    }
-                } catch (e: Exception) {
-                    Log.e("CheckVideo", "Error deleting temporary video file: ${e.message}")
-                }
-            }
+            deleteOriginalVideo()
 
             if (isFragmentActive) {
                 Toast.makeText(
                     requireContext(),
-                    "Video eliminado. Regresando a práctica...",
+                    "Regresando a práctica...",
                     Toast.LENGTH_SHORT
                 ).show()
             }
 
-            // Regresar a PracticeFragment
             returnToPracticeFragment()
         }
     }
 
-    private fun setupFullscreenMode() {
-        (activity as? HomeActivity)?.enableFullscreen()
-        (activity as? HomeActivity)?.hideBottomNavigation()
+    private fun deleteOriginalVideo() {
+        videoUri?.let { uri ->
+            try {
+                val deleted = requireContext().contentResolver.delete(uri, null, null)
+                if (deleted > 0) {
+                    Log.d("CheckVideo", "✅ Original video deleted from gallery (Movies/KeyFairy)")
+                } else {
+                    Log.w("CheckVideo", "⚠️ Could not delete original video from MediaStore")
+                }
+            } catch (e: Exception) {
+                Log.e("CheckVideo", "❌ Error deleting original video: ${e.message}")
+            }
+        }
     }
 
     private fun extractArguments() {
@@ -174,15 +170,41 @@ class CheckVideoFragment : BaseFragment() {
             return
         }
 
-        videoFile = uriToFile(videoUri!!)
+        videoFile = getRealVideoFile(videoUri!!)
     }
 
-    private fun setupViewModel() {
-        val practiceRepository = PracticeRepositoryImpl()
-        val registerPracticeUseCase = RegisterPracticeUseCase(practiceRepository)
-        val factory = RegisterPracticeViewModelFactory(registerPracticeUseCase)
+    private fun getRealVideoFile(uri: Uri): File? {
+        return try {
+            val cursor = requireContext().contentResolver.query(
+                uri,
+                arrayOf(MediaStore.Video.Media.DATA),
+                null, null, null
+            )
 
-        registerPracticeViewModel = ViewModelProvider(this, factory)[RegisterPracticeViewModel::class.java]
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val filePath = it.getString(it.getColumnIndexOrThrow(MediaStore.Video.Media.DATA))
+                    val file = File(filePath)
+
+                    Log.d("CheckVideo", "📹 Found real video file:")
+                    Log.d("CheckVideo", "   📁 Path: ${file.absolutePath}")
+                    Log.d("CheckVideo", "   📊 Size: ${file.length() / 1024}KB")
+                    Log.d("CheckVideo", "   ✅ Exists: ${file.exists()}")
+
+                    if (file.exists()) {
+                        return file
+                    } else {
+                        Log.e("CheckVideo", "❌ Video file does not exist at: $filePath")
+                    }
+                }
+            }
+
+            Log.e("CheckVideo", "❌ Could not get real path from URI: $uri")
+            null
+        } catch (e: Exception) {
+            Log.e("CheckVideo", "❌ Error getting real video file: ${e.message}")
+            null
+        }
     }
 
     private fun setupVideoPlayer() {
@@ -223,30 +245,6 @@ class CheckVideoFragment : BaseFragment() {
         }
     }
 
-    private fun setupObservers() {
-        registerPracticeViewModel.registerPracticeState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is RegisterPracticeState.Idle -> hideLoading()
-                is RegisterPracticeState.Loading -> showLoading()
-                is RegisterPracticeState.Success -> {
-                    hideLoading()
-                    if (isFragmentActive) {
-                        showSuccess("¡Práctica enviada exitosamente! ID: ${state.practiceResult.practiceId}")
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            if (isFragmentActive) {
-                                returnToPracticeFragmentAfterSuccess()
-                            }
-                        }, 1500)
-                    }
-                }
-                is RegisterPracticeState.Error -> {
-                    hideLoading()
-                    showError(state.message)
-                }
-            }
-        }
-    }
-
     private fun setupClickListeners() {
         // Button retry - deletes the video and retries the practice
         binding.btnSave.setOnClickListener {
@@ -255,20 +253,120 @@ class CheckVideoFragment : BaseFragment() {
             }
         }
 
-        // Button send - sends the practice to the server
+        // Button send - sends the practice to the server using WorkManager
         binding.btnDelete.setOnClickListener {
             safeNavigate {
-                sendPracticeToServer()
+                sendPracticeWithWorkManager()
+            }
+        }
+    }
+
+    private fun sendPracticeWithWorkManager() {
+        val uid = SecureStorage.getUid()
+        if (uid.isNullOrEmpty()) {
+            showError("Error: Usuario no autenticado")
+            return
+        }
+
+        val videoFile = this.videoFile
+        if (videoFile == null || !videoFile.exists()) {
+            showError("Error: Archivo de video no encontrado")
+            return
+        }
+
+        if (escalaName.isNullOrEmpty()) {
+            showError("Error: Datos de práctica incompletos")
+            return
+        }
+
+        try {
+            // Crear el objeto Practice con la ruta REAL del archivo
+            val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+
+            val practice = Practice(
+                practiceId = 0,
+                date = currentDate,
+                time = currentTime,
+                duration = videoDurationSeconds,
+                uid = uid,
+                videoLocalRoute = videoFile.absolutePath, // ✅ Ruta real en Movies/KeyFairy
+                scale = escalaName!!,
+                scaleType = determineScaleType(escalaName!!),
+                reps = octaves ?: 1,
+                bpm = bpm ?: 120
+            )
+
+            Log.d("CheckVideo", "📤 Scheduling upload: ${practice.scale} (${practice.bpm} BPM)")
+            Log.d("CheckVideo", "📁 Real video path: ${videoFile.absolutePath}")
+
+            workId = videoUploadManager.scheduleVideoUpload(practice, videoFile)
+
+            Log.d("CheckVideo", "✅ Upload scheduled with ID: $workId")
+
+            workId?.let { id ->
+                observeUploadProgress(id)
+            }
+
+            // Mostrar mensaje de confirmación
+            showSuccess("✅ Video programado para subida")
+
+            binding.root.postDelayed({
+                if (isFragmentActive) {
+                    returnToPracticeFragmentAfterScheduling()
+                }
+            }, 1000) // 1 segundo
+
+        } catch (e: Exception) {
+            Log.e("CheckVideo", "❌ Error scheduling upload: ${e.message}", e)
+            showError("Error al programar la subida: ${e.message}")
+        }
+    }
+
+    private fun observeUploadProgress(workId: java.util.UUID) {
+        videoUploadManager.observeWorkStatus(workId).observe(viewLifecycleOwner) { workInfo ->
+            when (workInfo.state) {
+                WorkInfo.State.ENQUEUED -> {
+                    Log.d("CheckVideo", "⏳ Upload enqueued: ${workInfo.id}")
+                }
+                WorkInfo.State.RUNNING -> {
+                    val progress = workInfo.progress.getInt("progress", 0)
+                    val message = workInfo.progress.getString("message") ?: ""
+                    Log.d("CheckVideo", "🔄 Upload progress: $progress% - $message")
+                }
+                WorkInfo.State.SUCCEEDED -> {
+                    val practiceId = workInfo.outputData.getInt("practice_id", 0)
+                    val attempts = workInfo.outputData.getInt("attempts", 1)
+                    Log.d("CheckVideo", "✅ Upload completed: Practice #$practiceId (after $attempts attempts)")
+
+                    videoUploadManager.cleanupCompletedWork(workId)
+                }
+                WorkInfo.State.FAILED -> {
+                    val error = workInfo.outputData.getString("error") ?: "Error desconocido"
+                    val attempts = workInfo.outputData.getInt("attempts", 1)
+                    Log.e("CheckVideo", "❌ Upload failed after $attempts attempts: $error")
+                }
+                WorkInfo.State.BLOCKED -> {
+                    Log.d("CheckVideo", "🚫 Upload blocked (waiting for network)")
+                }
+                WorkInfo.State.CANCELLED -> {
+                    Log.d("CheckVideo", "🛑 Upload cancelled")
+                }
             }
         }
     }
 
     private fun deleteVideoAndRetry() {
+        workId?.let { id ->
+            videoUploadManager.cancelWork(id)
+            workId = null
+        }
+
         videoUri?.let { uri ->
             try {
                 val deleted = requireContext().contentResolver.delete(uri, null, null)
                 if (deleted > 0) {
-                    Log.d("VideoPlayback", "Video deleted successfully")
+                    Log.d("VideoPlayback", "✅ Video deleted from gallery for retry")
                     if (isFragmentActive) {
                         Toast.makeText(
                             requireContext(),
@@ -278,7 +376,7 @@ class CheckVideoFragment : BaseFragment() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("VideoPlayback", "Error deleting video: ${e.message}")
+                Log.e("VideoPlayback", "❌ Error deleting video: ${e.message}")
             }
 
             navigateToCalibration()
@@ -300,87 +398,12 @@ class CheckVideoFragment : BaseFragment() {
         navigateAndClearStack(calibrationFragment, R.id.fragment_container)
     }
 
-    private fun sendPracticeToServer() {
-        val uid = SecureStorage.getUid()
-        if (uid.isNullOrEmpty()) {
-            showError("Error: Usuario no autenticado")
-            return
-        }
-
-        val videoFile = this.videoFile
-        if (videoFile == null || !videoFile.exists()) {
-            showError("Error: Archivo de video no encontrado")
-            return
-        }
-
-        if (escalaName.isNullOrEmpty()) {
-            showError("Error: Datos de práctica incompletos")
-            return
-        }
-
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-
-        val practice = Practice(
-            practiceId = 0,
-            date = currentDate,
-            time = currentTime,
-            duration = videoDurationSeconds,
-            uid = uid,
-            videoLocalRoute = videoFile.absolutePath,
-            scale = escalaName!!,
-            scaleType = determineScaleType(escalaName!!),
-            reps = octaves ?: 1,
-            bpm = bpm ?: 120
-        )
-
-        Log.d("CheckVideo", "Sending practice: $practice")
-        registerPracticeViewModel.registerPractice(practice, videoFile)
-    }
-
     private fun determineScaleType(scaleName: String): String {
         return when {
             scaleName.contains("Major", ignoreCase = true) -> "Major"
             scaleName.contains("Minor", ignoreCase = true) -> "Minor"
             else -> "Major"
         }
-    }
-
-    private fun uriToFile(uri: Uri): File? {
-        return try {
-            val inputStream = requireContext().contentResolver.openInputStream(uri)
-            val tempFile = File(
-                requireContext().cacheDir,
-                "practice_video_${System.currentTimeMillis()}.mp4"
-            )
-
-            inputStream?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-
-            tempFile
-        } catch (e: Exception) {
-            Log.e("CheckVideo", "Error converting URI to File: ${e.message}")
-            null
-        }
-    }
-
-    private fun showLoading() {
-        if (!isFragmentActive) return
-
-        binding.btnDelete.isEnabled = false
-        binding.btnSave.isEnabled = false
-        binding.btnDelete.text = "Enviando..."
-    }
-
-    private fun hideLoading() {
-        if (!isFragmentActive) return
-
-        binding.btnDelete.isEnabled = true
-        binding.btnSave.isEnabled = true
-        binding.btnDelete.text = "Enviar"
     }
 
     private fun showError(message: String) {
@@ -393,7 +416,7 @@ class CheckVideoFragment : BaseFragment() {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun returnToPracticeFragmentAfterSuccess() {
+    private fun returnToPracticeFragmentAfterScheduling() {
         safeNavigate {
             (activity as? HomeActivity)?.disableFullscreen()
             (activity as? HomeActivity)?.showBottomNavigation()
@@ -402,7 +425,7 @@ class CheckVideoFragment : BaseFragment() {
             navigateAndClearStack(practiceFragment, R.id.fragment_container)
             (activity as? HomeActivity)?.returnToMainNavigation(practiceFragment)
 
-            Log.d("CheckVideo", "Navigating back to PracticeFragment after successful upload")
+            Log.d("CheckVideo", "📱 Video kept for upload - will be deleted after successful upload")
         }
     }
 
@@ -415,7 +438,7 @@ class CheckVideoFragment : BaseFragment() {
             navigateAndClearStack(practiceFragment, R.id.fragment_container)
             (activity as? HomeActivity)?.returnToMainNavigation(practiceFragment)
 
-            Log.d("CheckVideo", "Navigating back to PracticeFragment - Flow completed")
+            Log.d("CheckVideo", "📱 Returned to PracticeFragment")
         }
     }
 
@@ -436,33 +459,14 @@ class CheckVideoFragment : BaseFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // Remover el callback del back button
         backPressedCallback?.remove()
         backPressedCallback = null
 
-        // Limpiar video player
         if (_binding != null) {
             binding.videoView.stopPlayback()
         }
 
-        // Limpiar ViewModel state
-        if (::registerPracticeViewModel.isInitialized) {
-            registerPracticeViewModel.resetState()
-        }
-
-        // El back button maneja la limpieza
-        if (!hasNavigatedAway) {
-            videoFile?.let { file ->
-                try {
-                    if (file.exists()) {
-                        file.delete()
-                        Log.d("CheckVideo", "Temporary video file cleaned up in onDestroyView")
-                    }
-                } catch (e: Exception) {
-                    Log.e("CheckVideo", "Error cleaning up temporary file: ${e.message}")
-                }
-            }
-        }
+        Log.d("CheckVideo", "🏠 CheckVideo destroyed")
 
         _binding = null
     }
