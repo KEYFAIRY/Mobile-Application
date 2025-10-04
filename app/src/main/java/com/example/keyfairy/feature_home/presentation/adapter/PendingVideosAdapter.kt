@@ -53,7 +53,13 @@ class PendingVideosAdapter(
     }
 
     private fun bindBasicData(holder: PendingVideoViewHolder, pendingVideo: PendingVideo) {
-        holder.scaleName.text = pendingVideo.scaleName
+        val titleText = if (pendingVideo.scaleType.isNotEmpty()) {
+            "${pendingVideo.scaleName} (${pendingVideo.scaleType})"
+        } else {
+            pendingVideo.scaleName
+        }
+
+        holder.scaleName.text = titleText
         holder.uploadStatus.text = getDetailedStatusText(pendingVideo)
         holder.videoDate.text = pendingVideo.getVideoDate()
         holder.practiceDetails.text = pendingVideo.getVideoDetails()

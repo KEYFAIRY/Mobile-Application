@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -23,6 +24,7 @@ class VideoUploadWorker(
 ) : CoroutineWorker(ctx, params) {
 
     companion object {
+        const val KEY_VIDEO_URI = "video_uri"
         const val KEY_VIDEO_PATH = "video_path"
         const val KEY_UID = "uid"
         const val KEY_ESCALA_NAME = "escala_name"
@@ -52,24 +54,36 @@ class VideoUploadWorker(
             setForegroundAsync(createForegroundInfo("Subiendo video... (intento $runAttempt)"))
         } catch (e: Exception) {
             Log.w("VideoUploadWorker", "⚠️ Could not set foreground: ${e.message}")
-            // Continuar sin foreground si falla
         }
 
         try {
             if (isStopped) return@withContext Result.failure(createFailureData("Worker was cancelled by system"))
 
+            // Obtener URI y PATH del inputData
+            val videoUriString = inputData.getString(KEY_VIDEO_URI)
             val videoPath = inputData.getString(KEY_VIDEO_PATH)
-            if (videoPath.isNullOrEmpty()) {
-                Log.e("VideoUploadWorker", "❌ Video path missing in inputData")
-                return@withContext Result.failure(createFailureData("Missing video path"))
+
+            if (videoUriString.isNullOrEmpty() || videoPath.isNullOrEmpty()) {
+                Log.e("VideoUploadWorker", "❌ Video URI or path missing in inputData")
+                return@withContext Result.failure(createFailureData("Missing video URI or path"))
             }
 
+            val videoUri = Uri.parse(videoUriString)
             val videoFile = File(videoPath)
+
+            // Verificar que el archivo existe
             if (!videoFile.exists()) {
-                Log.e("VideoUploadWorker", "❌ Video file not found: $videoPath")
-                // Return failure and include video path so manager/fragment can detect and cleanup.
-                return@withContext Result.failure(createFailureData("Video file not found", runAttempt).toOutputWithPath(videoPath))
+                Log.e("VideoUploadWorker", "❌ Video file not found at original location: $videoPath")
+                return@withContext Result.failure(
+                    createFailureData("Video file not found", runAttempt)
+                        .toOutputWithVideoInfo(videoUri, videoPath)
+                )
             }
+
+            Log.d("VideoUploadWorker", "📤 Uploading from ORIGINAL location:")
+            Log.d("VideoUploadWorker", "   📁 URI: $videoUri")
+            Log.d("VideoUploadWorker", "   📁 Path: $videoPath")
+            Log.d("VideoUploadWorker", "   📊 Size: ${videoFile.length() / 1024}KB")
 
             val uid = inputData.getString(KEY_UID).orEmpty()
             val escalaName = inputData.getString(KEY_ESCALA_NAME).orEmpty()
@@ -81,10 +95,8 @@ class VideoUploadWorker(
             val duration = inputData.getInt(KEY_DURATION, 0)
             val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
 
-            // Report preparing progress
             setProgressSafely(10, "Preparando...", timestamp)
 
-            // TODO: inject repository (example uses direct instantiation placeholder)
             val repository = PracticeRepositoryImpl()
             val useCase = RegisterPracticeUseCase(repository)
 
@@ -114,28 +126,41 @@ class VideoUploadWorker(
                 val practiceResult = result.getOrNull()
                 setProgressSafely(100, "Upload completado", timestamp)
 
-                // Build output data (include video path so UI/manager can map)
+                Log.d("VideoUploadWorker", "✅ Upload successful")
+
                 val output = workDataOf(
                     "success" to true,
                     "practice_id" to (practiceResult?.practiceId ?: 0),
-                    "scale" to (practiceResult?.scale ?: escalaName),
+                    "scale" to escalaName,
+                    "scale_type" to scaleType,
+                    "bpm" to bpm,
+                    "octaves" to octaves,
                     "attempts" to runAttempt,
                     "timestamp" to timestamp,
+                    "date" to date,
+                    "time" to time,
+                    KEY_VIDEO_URI to videoUriString,
                     KEY_VIDEO_PATH to videoPath
                 )
-
-                // Delete local file only AFTER success (manager also does safe delete)
-                cleanupVideoFile(videoPath)
 
                 Result.success(output)
             } else {
                 val err = result.exceptionOrNull()
-                handleUploadError(err, err?.message ?: "Unknown error", runAttempt, videoPath, timestamp)
+                handleUploadError(err, err?.message ?: "Unknown error", runAttempt, videoUri, videoPath, timestamp)
             }
         } catch (e: Exception) {
             Log.e("VideoUploadWorker", "💥 Exception in worker: ${e.message}", e)
+            val videoUriString = inputData.getString(KEY_VIDEO_URI)
             val videoPath = inputData.getString(KEY_VIDEO_PATH)
-            handleUploadError(e, e.message ?: "Exception", runAttempt, videoPath, inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis()))
+            val videoUri = if (videoUriString != null) Uri.parse(videoUriString) else null
+            handleUploadError(
+                e,
+                e.message ?: "Exception",
+                runAttempt,
+                videoUri,
+                videoPath,
+                inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
+            )
         }
     }
 
@@ -143,6 +168,7 @@ class VideoUploadWorker(
         error: Throwable?,
         errorMessage: String,
         attemptCount: Int,
+        videoUri: Uri?,
         videoPath: String?,
         timestamp: Long
     ): Result {
@@ -155,9 +181,8 @@ class VideoUploadWorker(
             setProgressSafely(0, "Error de conexión. Reintentando...", timestamp)
             Result.retry()
         } else {
-            // Final failure: include video path in output so manager/fragment can cancel/cleanup
             val failureData = createFailureData(errorMessage, attemptCount, timestamp)
-            Result.failure(failureData.toOutputWithPath(videoPath))
+            Result.failure(failureData.toOutputWithVideoInfo(videoUri, videoPath))
         }
     }
 
@@ -178,7 +203,7 @@ class VideoUploadWorker(
                     "message" to message,
                     "timestamp" to timestamp
                 )
-                setProgress(progressData) // ✅ ya no marca error
+                setProgress(progressData)
                 Log.d("VideoUploadWorker", "📊 Progress: $progress - $message")
             }
         } catch (e: Exception) {
@@ -186,8 +211,11 @@ class VideoUploadWorker(
         }
     }
 
-
-    private fun createFailureData(error: String, attempts: Int = runAttemptCount, timestamp: Long = System.currentTimeMillis()): androidx.work.Data {
+    private fun createFailureData(
+        error: String,
+        attempts: Int = runAttemptCount,
+        timestamp: Long = System.currentTimeMillis()
+    ): Data {
         return workDataOf(
             "success" to false,
             "error" to error,
@@ -197,24 +225,17 @@ class VideoUploadWorker(
         )
     }
 
-    private fun androidx.work.Data.toOutputWithPath(videoPath: String?): androidx.work.Data {
-        return if (!videoPath.isNullOrEmpty()) {
-            androidx.work.workDataOf(*(this.keyValueMap.entries.map { it.key to it.value }.toTypedArray()), KEY_VIDEO_PATH to videoPath)
-        } else this
-    }
+    private fun Data.toOutputWithVideoInfo(videoUri: Uri?, videoPath: String?): Data {
+        val entries = this.keyValueMap.entries.map { it.key to it.value }.toMutableList()
 
-    private fun cleanupVideoFile(videoPath: String?) {
-        if (videoPath.isNullOrEmpty()) return
-        try {
-            val f = File(videoPath)
-            when {
-                !f.exists() -> Log.d("VideoUploadWorker", "📂 File already deleted: ${f.name}")
-                f.delete() -> Log.d("VideoUploadWorker", "🗑️ Video deleted by worker: ${f.name}")
-                else -> Log.w("VideoUploadWorker", "⚠️ Could not delete file: ${f.name}")
-            }
-        } catch (e: Exception) {
-            Log.e("VideoUploadWorker", "❌ Error cleaning file: ${e.message}", e)
+        if (videoUri != null) {
+            entries.add(KEY_VIDEO_URI to videoUri.toString())
         }
+        if (!videoPath.isNullOrEmpty()) {
+            entries.add(KEY_VIDEO_PATH to videoPath)
+        }
+
+        return workDataOf(*entries.toTypedArray())
     }
 
     private fun determineScaleType(scaleName: String): String {
@@ -235,7 +256,6 @@ class VideoUploadWorker(
         val channelId = NOTIF_CHANNEL_ID
         val channelName = "Subida de videos"
 
-        // ✅ Crear canal de notificación si es necesario
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -258,7 +278,6 @@ class VideoUploadWorker(
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .build()
 
-        // ✅ Especificar el tipo de servicio correcto
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             ForegroundInfo(
                 NOTIF_ID,

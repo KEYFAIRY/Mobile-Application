@@ -280,7 +280,6 @@ class CheckVideoFragment : BaseFragment() {
         }
 
         try {
-            // Crear el objeto Practice con la ruta REAL del archivo
             val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
@@ -297,25 +296,30 @@ class CheckVideoFragment : BaseFragment() {
                 bpm = bpm ?: 120
             )
 
-            Log.d("CheckVideo", "📤 Scheduling upload: ${practice.scale} (${practice.bpm} BPM)")
-            Log.d("CheckVideo", "📁 Real video path: ${videoFile.absolutePath}")
+            Log.d("CheckVideo", "📤 Scheduling upload with original file")
+            Log.d("CheckVideo", "📁 Original path: ${videoFile.absolutePath}")
+            Log.d("CheckVideo", "📁 File size: ${videoFile.length() / 1024}KB")
+            Log.d("CheckVideo", "📁 File exists: ${videoFile.exists()}")
 
-            workId = videoUploadManager.scheduleVideoUpload(practice, videoFile)
+            workId = videoUploadManager.scheduleVideoUpload(
+                practice = practice,
+                videoUri = videoUri!! // Usar el URI original del MediaStore
+            )
 
             Log.d("CheckVideo", "✅ Upload scheduled with ID: $workId")
+            Log.d("CheckVideo", "📌 Video will remain at: ${videoFile.absolutePath}")
 
             workId?.let { id ->
                 observeUploadProgress(id)
             }
 
-            // Mostrar mensaje de confirmación
             showSuccess("✅ Video programado para subida")
 
             binding.root.postDelayed({
                 if (isFragmentActive) {
                     returnToPracticeFragmentAfterScheduling()
                 }
-            }, 1000) // 1 segundo
+            }, 1000)
 
         } catch (e: Exception) {
             Log.e("CheckVideo", "❌ Error scheduling upload: ${e.message}", e)
