@@ -3,17 +3,7 @@ from music21 import scale
 def obtener_escalas():
     traducciones_escalas = {
         'MajorScale': 'Mayor',
-        'MinorScale': 'Menor',
-        'DorianScale': 'Dórica',
-        'PhrygianScale': 'Frigia',
-        'LydianScale': 'Lidia',
-        'MixolydianScale': 'Mixolidia',
-        'LocrianScale': 'Locria',
-        'HarmonicMinorScale': 'Menor armónica',
-        'MelodicMinorScale': 'Menor melódica',
-        'ChromaticScale': 'Cromática',
-        'WholeToneScale': 'Tonos enteros',
-        'OctatonicScale': 'Octatónica'
+        'HarmonicMinorScale': 'Menor armónica'
     }
 
     notas_latinas = {

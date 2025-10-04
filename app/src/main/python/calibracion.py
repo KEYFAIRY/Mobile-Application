@@ -5,18 +5,18 @@ import os
 
 RESIZE_WIDTH = 608
 # Sirve para delimitar dos bordes a cada lado de la imagen, 10 pixeles izquierda, Ancho - 10 en la der
-PIANO_AREA_XSECTION_OFFSET = int(RESIZE_WIDTH * 0.03)
-PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.02)
+PIANO_AREA_XSECTION_OFFSET = int(RESIZE_WIDTH * 0.01)
+PIANO_AREA_YSECTION_OFFSET = int(RESIZE_WIDTH * 0.04)
 RIGHT_SIDE_LIMIT = RESIZE_WIDTH - PIANO_AREA_YSECTION_OFFSET
 # Distancia aproximada que realiza el usuario cada vez que hace una correccion
-MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.025)
+MOVEMENT_CORRECTION_DISTANCE = int(RESIZE_WIDTH * 0.02)
 
 
 def is_calibrated(byte_array_image, piano_area_percentage, heightToWidthRatio, context):
 
     def instruction_command(corners, image_height):
         # Rango de tolerancia que determina si el piano esta recto o no.
-        straight_inferior_corners_tolerance = int(image_height * 0.2)
+        straight_inferior_corners_tolerance = int(image_height * 0.15)
         bottom_side_limit = image_height - PIANO_AREA_YSECTION_OFFSET
 
         print(f"BOTTOM SIDE LIMIT: {bottom_side_limit}")

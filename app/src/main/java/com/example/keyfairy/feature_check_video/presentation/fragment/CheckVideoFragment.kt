@@ -404,9 +404,9 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun determineScaleType(scaleName: String): String {
         return when {
-            scaleName.contains("Major", ignoreCase = true) -> "Major"
-            scaleName.contains("Minor", ignoreCase = true) -> "Minor"
-            else -> "Major"
+            scaleName.contains("Mayor", ignoreCase = true) -> "Mayor"
+            scaleName.contains("Menor", ignoreCase = true) -> "Menor"
+            else -> "Mayor"
         }
     }
 
