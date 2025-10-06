@@ -24,6 +24,10 @@ class AuthAuthenticator : Authenticator {
         Log.d(TAG, "🔄 Received 401, attempting token refresh...")
 
         // Intentar refrescar el token
+        if(!TokenManager.hasInternetConnection()){
+            Log.d(TAG, "🌐 No internet connection, skipping token refresh")
+            return null
+        }
         val newToken = TokenManager.refreshToken()
 
         return if (newToken != null) {
@@ -34,7 +38,6 @@ class AuthAuthenticator : Authenticator {
                 .build()
         } else {
             Log.e(TAG, "❌ Token refresh failed")
-            // TODO: Redirigir a login
             null
         }
     }

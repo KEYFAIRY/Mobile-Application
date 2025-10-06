@@ -1,6 +1,6 @@
 package com.example.keyfairy.utils.network
 
-import com.example.keyfairy.utils.storage.SecureStorage
+import com.example.keyfairy.utils.storage.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -13,7 +13,7 @@ class AuthInterceptor : Interceptor {
         val originalRequest = chain.request()
 
         // Obtener token
-        val token = SecureStorage.getIdToken()
+        val token = TokenManager.getValidToken()
 
         // Si no hay token, continuar sin modificar
         if (token.isNullOrEmpty()) {
