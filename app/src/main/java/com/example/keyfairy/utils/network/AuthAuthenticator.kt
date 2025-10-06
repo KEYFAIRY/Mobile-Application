@@ -15,7 +15,6 @@ class AuthAuthenticator : Authenticator {
     private val TAG = "AuthAuthenticator"
 
     override fun authenticate(route: Route?, response: Response): Request? {
-        // Si ya intentamos refrescar, no lo hagas de nuevo (evitar loop infinito)
         if (response.request.header("Authorization") != null &&
             response.priorResponse?.code == 401) {
             Log.e(TAG, "Token refresh already attempted, giving up")

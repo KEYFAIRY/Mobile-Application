@@ -18,6 +18,7 @@ import com.example.keyfairy.feature_home.presentation.HomeActivity
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.navigateAndClearStack
+import com.example.keyfairy.utils.enums.ScaleType
 import com.example.keyfairy.utils.storage.SecureStorage
 import com.example.keyfairy.utils.workers.VideoUploadManager
 import java.io.File
@@ -40,39 +41,9 @@ class CheckVideoFragment : BaseFragment() {
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
-    private var noteType: String? = null
+    private var figure: Double? = null
     private var escalaData: String? = null
     private var videoDurationSeconds: Int = 0
-
-    companion object {
-        private const val ARG_VIDEO_URI = "video_uri"
-        private const val ARG_ESCALA_NAME = "escalaName"
-        private const val ARG_ESCALA_NOTES = "escalaNotes"
-        private const val ARG_OCTAVES = "octaves"
-        private const val ARG_BPM = "bpm"
-        private const val ARG_VIDEO_DURATION = "videoDuration"
-
-        fun newInstance(
-            videoUri: Uri,
-            escalaName: String,
-            escalaNotes: Int,
-            octaves: Int,
-            bpm: Int,
-            videoDurationSeconds: Int
-        ): CheckVideoFragment {
-            val fragment = CheckVideoFragment()
-            val args = Bundle().apply {
-                putParcelable(ARG_VIDEO_URI, videoUri)
-                putString(ARG_ESCALA_NAME, escalaName)
-                putInt(ARG_ESCALA_NOTES, escalaNotes)
-                putInt(ARG_OCTAVES, octaves)
-                putInt(ARG_BPM, bpm)
-                putInt(ARG_VIDEO_DURATION, videoDurationSeconds)
-            }
-            fragment.arguments = args
-            return fragment
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -112,7 +83,6 @@ class CheckVideoFragment : BaseFragment() {
                     videoUploadManager.cancelWork(id)
                     Log.d("CheckVideo", "🚫 Cancelled pending upload work: $id")
                 }
-
                 deleteVideoAndReturn()
             }
         }
@@ -122,7 +92,6 @@ class CheckVideoFragment : BaseFragment() {
     private fun deleteVideoAndReturn() {
         safeNavigate {
             deleteOriginalVideo()
-
             if (isFragmentActive) {
                 Toast.makeText(
                     requireContext(),
@@ -130,7 +99,6 @@ class CheckVideoFragment : BaseFragment() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
-
             returnToPracticeFragment()
         }
     }
@@ -152,13 +120,13 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun extractArguments() {
         arguments?.let { bundle ->
-            videoUri = bundle.getParcelable(ARG_VIDEO_URI)
-            escalaName = bundle.getString(ARG_ESCALA_NAME)
-            escalaNotes = bundle.getInt(ARG_ESCALA_NOTES)
-            octaves = bundle.getInt(ARG_OCTAVES)
-            bpm = bundle.getInt(ARG_BPM)
-            videoDurationSeconds = bundle.getInt(ARG_VIDEO_DURATION)
-            noteType = bundle.getString("noteType")
+            videoUri = bundle.getParcelable("video_uri")
+            escalaName = bundle.getString("escalaName")
+            escalaNotes = bundle.getInt("escalaNotes")
+            octaves = bundle.getInt("octaves")
+            bpm = bundle.getInt("bpm")
+            videoDurationSeconds = bundle.getInt("videoDuration")
+            figure = bundle.getDouble("figure")
             escalaData = bundle.getString("escala_data")
         }
 
@@ -170,10 +138,10 @@ class CheckVideoFragment : BaseFragment() {
             return
         }
 
-        videoFile = getRealVideoFile(videoUri!!)
+        videoFile = getVideoFile(videoUri!!)
     }
 
-    private fun getRealVideoFile(uri: Uri): File? {
+    private fun getVideoFile(uri: Uri): File? {
         return try {
             val cursor = requireContext().contentResolver.query(
                 uri,
@@ -246,14 +214,12 @@ class CheckVideoFragment : BaseFragment() {
     }
 
     private fun setupClickListeners() {
-        // Button retry - deletes the video and retries the practice
         binding.btnSave.setOnClickListener {
             safeNavigate {
                 deleteVideoAndRetry()
             }
         }
 
-        // Button send - sends the practice to the server using WorkManager
         binding.btnDelete.setOnClickListener {
             safeNavigate {
                 sendPracticeWithWorkManager()
@@ -284,16 +250,17 @@ class CheckVideoFragment : BaseFragment() {
             val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
             val practice = Practice(
+                uid = uid,
                 practiceId = 0,
                 date = currentDate,
                 time = currentTime,
-                duration = videoDurationSeconds,
-                uid = uid,
-                videoLocalRoute = videoFile.absolutePath, // ✅ Ruta real en Movies/KeyFairy
                 scale = escalaName!!,
-                scaleType = determineScaleType(escalaName!!),
-                reps = octaves ?: 1,
-                bpm = bpm ?: 120
+                scaleType = ScaleType.fromName(escalaName!!).displayName,
+                duration = videoDurationSeconds,
+                bpm = bpm ?: 0,
+                figure = figure ?: 0.0,
+                octaves = octaves ?: 0,
+                videoLocalRoute = videoFile.absolutePath
             )
 
             Log.d("CheckVideo", "📤 Scheduling upload with original file")
@@ -303,7 +270,7 @@ class CheckVideoFragment : BaseFragment() {
 
             workId = videoUploadManager.scheduleVideoUpload(
                 practice = practice,
-                videoUri = videoUri!! // Usar el URI original del MediaStore
+                videoUri = videoUri!!
             )
 
             Log.d("CheckVideo", "✅ Upload scheduled with ID: $workId")
@@ -342,7 +309,6 @@ class CheckVideoFragment : BaseFragment() {
                     val practiceId = workInfo.outputData.getInt("practice_id", 0)
                     val attempts = workInfo.outputData.getInt("attempts", 1)
                     Log.d("CheckVideo", "✅ Upload completed: Practice #$practiceId (after $attempts attempts)")
-
                     videoUploadManager.cleanupCompletedWork(workId)
                 }
                 WorkInfo.State.FAILED -> {
@@ -391,23 +357,15 @@ class CheckVideoFragment : BaseFragment() {
         val calibrationFragment = CalibrateCameraFragment().apply {
             arguments = Bundle().apply {
                 putString("escalaName", escalaName)
-                putInt("escalaNotes", escalaNotes ?: 8)
-                putInt("octaves", octaves ?: 1)
-                putInt("bpm", bpm ?: 120)
-                putString("noteType", noteType)
+                putInt("escalaNotes", escalaNotes ?: 0)
+                putInt("octaves", octaves ?: 0)
+                putInt("bpm", bpm ?: 0)
+                putDouble("figure", figure ?: 0.0)
                 putString("escala_data", escalaData)
             }
         }
 
         navigateAndClearStack(calibrationFragment, R.id.fragment_container)
-    }
-
-    private fun determineScaleType(scaleName: String): String {
-        return when {
-            scaleName.contains("Mayor", ignoreCase = true) -> "Mayor"
-            scaleName.contains("Menor", ignoreCase = true) -> "Menor"
-            else -> "Mayor"
-        }
     }
 
     private fun showError(message: String) {

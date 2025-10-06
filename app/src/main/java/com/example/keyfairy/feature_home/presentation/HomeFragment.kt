@@ -1,6 +1,8 @@
 package com.example.keyfairy.feature_home.presentation
 
+import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -35,21 +37,46 @@ class HomeFragment : BaseFragment() {
     private val cleanedWorks = mutableSetOf<UUID>()
     private val cancellingWorks = mutableSetOf<UUID>()
 
-    // ✅ Registrar el launcher para permisos ANTES de onCreateView
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            Log.d("HomeFragment", "✅ Notification permission granted")
+    // Launcher para solicitar múltiples permisos
+    private val multiplePermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val deniedPermissions = permissions.filter { !it.value }.keys
+
+        if (deniedPermissions.isEmpty()) {
+            Log.d("HomeFragment", "✅ All permissions granted")
+            Toast.makeText(
+                requireContext(),
+                "Todos los permisos concedidos",
+                Toast.LENGTH_SHORT
+            ).show()
         } else {
-            Log.w("HomeFragment", "⚠️ Notification permission denied")
-            Toast.makeText(requireContext(),
-                "Las notificaciones están deshabilitadas. Los uploads funcionarán pero sin notificaciones.",
-                Toast.LENGTH_LONG).show()
+            Log.w("HomeFragment", "⚠️ Some permissions denied: $deniedPermissions")
+
+            val criticalPermissions = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            val hasCriticalDenied = deniedPermissions.any { it in criticalPermissions }
+
+            if (hasCriticalDenied) {
+                Toast.makeText(
+                    requireContext(),
+                    "Se necesitan permisos de cámara y audio para usar la app",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "Algunos permisos opcionales fueron denegados",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -57,25 +84,53 @@ class HomeFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Ahora solicitar permisos usando el launcher registrado
-        requestNotificationPermissionIfNeeded()
-
+        requestAllPermissions()
         setupWorkManager()
         setupPendingVideosRecyclerView()
         observePendingVideos()
         setupClickListeners()
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
+    private fun requestAllPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+
+        // Permisos críticos (siempre necesarios)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
+
+        // Permiso de almacenamiento (solo para Android 9 y anteriores)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
             ) {
-                // ✅ Usar el launcher ya registrado
-                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
+        }
+
+        // Permiso de notificaciones (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // Solicitar permisos si hay alguno pendiente
+        if (permissionsToRequest.isNotEmpty()) {
+            Log.d("HomeFragment", "📋 Requesting permissions: $permissionsToRequest")
+            multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+        } else {
+            Log.d("HomeFragment", "✅ All permissions already granted")
         }
     }
 
@@ -83,8 +138,6 @@ class HomeFragment : BaseFragment() {
         workManager = WorkManager.getInstance(requireContext())
         videoUploadManager = VideoUploadManager(requireContext())
     }
-
-    // ...existing code... (resto del código sin cambios)
 
     private fun setupPendingVideosRecyclerView() {
         pendingVideosAdapter = PendingVideosAdapter(
@@ -131,29 +184,24 @@ class HomeFragment : BaseFragment() {
     private fun processWorkInfoList(workInfoList: List<WorkInfo>) {
         Log.d("HomeFragment", "📊 Processing ${workInfoList.size} work items")
 
-        // 1. Auto-clean works which refer to non-existing files
         workInfoList.forEach { workInfo ->
-            // Obtener video path preferentemente del inputData -> compatibilidad
-            val potentialPath = workInfo.outputData.getString(VideoUploadWorker.KEY_VIDEO_PATH)
+            val potentialPath = workInfo.progress.getString(VideoUploadWorker.KEY_VIDEO_PATH)
+                ?: workInfo.outputData.getString(VideoUploadWorker.KEY_VIDEO_PATH)
 
             if (!potentialPath.isNullOrEmpty()) {
                 val f = File(potentialPath)
                 if (!f.exists()) {
-                    // Si el archivo no existe y el trabajo está en un estado activo o fallido, limpiarlo
                     if (workInfo.state != WorkInfo.State.SUCCEEDED && workInfo.state != WorkInfo.State.CANCELLED) {
                         Log.w("HomeFragment", "⚠️ Work ${workInfo.id} references missing file -> cancelling and cleaning")
                         workManager.cancelWorkById(workInfo.id)
-                        // también pedir al manager que limpie tracking
                         videoUploadManager.cancelWork(workInfo.id)
                         cleanedWorks.add(workInfo.id)
                     }
                 }
             }
-            // adicional: procesar completados/cancelados para toasts & cleanup
             processCompletedWork(workInfo)
         }
 
-        // 2. Filtrar trabajos activos para UI (excluyendo los que ya limpiamos)
         val activeWorks = workInfoList.filter { workInfo ->
             isActiveWork(workInfo) && !cleanedWorks.contains(workInfo.id)
         }
@@ -168,7 +216,7 @@ class HomeFragment : BaseFragment() {
             WorkInfo.State.SUCCEEDED -> {
                 if (!cleanedWorks.contains(workId)) {
                     val practiceId = workInfo.outputData.getInt("practice_id", 0)
-                    val scale = workInfo.outputData.getString("scale") ?: "Unknown"
+                    val scale = workInfo.outputData.getString(VideoUploadWorker.KEY_SCALE) ?: "Unknown"
                     val attempts = workInfo.outputData.getInt("attempts", 1)
 
                     Log.d("HomeFragment", "✅ Upload completed: $scale -> Practice #$practiceId (after $attempts attempts)")

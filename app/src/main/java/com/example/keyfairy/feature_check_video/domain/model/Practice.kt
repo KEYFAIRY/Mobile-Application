@@ -1,14 +1,15 @@
 package com.example.keyfairy.feature_check_video.domain.model
 
 data class Practice(
-    val practiceId: Int,
+    val uid: String,
+    var practiceId: Int,
     val date: String,
     val time: String,
-    val duration: Int,
-    val uid: String,
-    val videoLocalRoute: String,
     val scale: String,
     val scaleType: String,
-    val reps: Int,
-    val bpm: Int
+    val duration: Int,
+    val bpm: Int,
+    val figure: Double,
+    val octaves: Int,
+    val videoLocalRoute: String,
 )

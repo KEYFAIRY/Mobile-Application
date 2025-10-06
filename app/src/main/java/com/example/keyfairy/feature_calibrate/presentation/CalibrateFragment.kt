@@ -15,7 +15,7 @@ class CalibrateFragment : BaseFragment() {
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
-    private var noteType: String? = null
+    private var figure: Double? = null
     private var escalaData: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,7 +25,7 @@ class CalibrateFragment : BaseFragment() {
             escalaNotes = bundle.getInt("escalaNotes")
             octaves = bundle.getInt("octaves")
             bpm = bundle.getInt("bpm")
-            noteType = bundle.getString("noteType")
+            figure = bundle.getDouble("figure")
             escalaData = bundle.getString("escala_data")
         }
     }
@@ -57,9 +57,9 @@ class CalibrateFragment : BaseFragment() {
             arguments = Bundle().apply {
                 putString("escalaName", escalaName)
                 putInt("escalaNotes", escalaNotes ?: 0)
-                putInt("octaves", octaves ?: 1)
-                putInt("bpm", bpm ?: 120)
-                putString("noteType", noteType)
+                putInt("octaves", octaves ?: 0)
+                putInt("bpm", bpm ?: 0)
+                putDouble("figure", figure ?: 0.0)
                 putString("escala_data", escalaData)
             }
         }

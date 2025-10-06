@@ -38,7 +38,7 @@ class UserRepositoryImpl: UserRepository {
                     uid = uid,
                     email = email,
                     name = name,
-                    pianoLevel = pianoLevel.value
+                    pianoLevel = pianoLevel.label
                 )
             )
 
@@ -67,7 +67,7 @@ class UserRepositoryImpl: UserRepository {
             // USAR API CON AUTENTICACIÓN PARA ACTUALIZAR
             val response = userApi.updateUser(
                 uid = uid,
-                request = UpdateUserRequest(pianoLevel = pianoLevel.value)
+                request = UpdateUserRequest(pianoLevel = pianoLevel.label)
             )
 
             if (response.isSuccessful && response.body()?.data != null) {

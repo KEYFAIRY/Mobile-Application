@@ -5,9 +5,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.keyfairy.feature_auth.presentation.activity.AuthActivity
 import com.example.keyfairy.feature_home.presentation.HomeActivity
-import com.example.keyfairy.utils.storage.SecureStorage
+import com.example.keyfairy.utils.storage.TokenManager
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,15 +26,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAuthenticationStatus() {
-        // Verificar si el usuario tiene una sesión válida
-        val isLoggedIn = SecureStorage.hasValidSession()
-
-        if (isLoggedIn) {
-            // Usuario autenticado, ir a HomeActivity
-            navigateToHome()
-        } else {
-            // Usuario no autenticado, ir a AuthActivity (login/signup)
-            navigateToAuth()
+        lifecycleScope.launch {
+            if (TokenManager.hasValidSession()){
+                navigateToHome()
+            } else {
+                navigateToAuth()
+            }
         }
     }
 

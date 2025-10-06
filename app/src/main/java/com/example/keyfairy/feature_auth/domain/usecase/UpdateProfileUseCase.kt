@@ -12,20 +12,9 @@ class UpdateProfileUseCase (
             uid.isBlank() -> {
                 Result.failure(Exception("UID no puede estar vacío"))
             }
-            !isValidPianoLevel(pianoLevel) -> {
-                Result.failure(Exception("Nivel de piano inválido. Use: principiante, intermedio o avanzado"))
-            }
             else -> {
                 userRepository.updateUserProfile(uid, pianoLevel)
             }
         }
-    }
-
-    private fun isValidPianoLevel(pianoLevel: PianoLevel): Boolean {
-        return pianoLevel in arrayOf(
-            PianoLevel.BEGINNER,
-            PianoLevel.INTERMEDIATE,
-            PianoLevel.ADVANCED
-        )
     }
 }

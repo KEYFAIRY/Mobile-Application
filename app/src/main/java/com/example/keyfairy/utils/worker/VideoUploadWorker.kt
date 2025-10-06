@@ -27,19 +27,20 @@ class VideoUploadWorker(
         const val KEY_VIDEO_URI = "video_uri"
         const val KEY_VIDEO_PATH = "video_path"
         const val KEY_UID = "uid"
-        const val KEY_ESCALA_NAME = "escala_name"
-        const val KEY_SCALE_TYPE = "scale_type"
-        const val KEY_OCTAVES = "octaves"
-        const val KEY_BPM = "bpm"
-        const val KEY_DURATION = "duration"
+        const val KEY_PRACTICE_ID = "practice_id"
         const val KEY_DATE = "date"
         const val KEY_TIME = "time"
+        const val KEY_SCALE = "scale"
+        const val KEY_SCALE_TYPE = "scale_type"
+        const val KEY_DURATION = "duration"
+        const val KEY_BPM = "bpm"
+        const val KEY_FIGURE = "figure"
+        const val KEY_OCTAVES = "octaves"
+        const val KEY_VIDEO_LOCAL_ROUTE = "video_local_route"
         const val KEY_TIMESTAMP = "timestamp"
 
         const val WORK_NAME = "video_upload_work"
-
         private const val MAX_RETRY_COUNT = 10
-
         private const val NOTIF_CHANNEL_ID = "video_upload_channel"
         private const val NOTIF_ID = 98765
     }
@@ -51,6 +52,21 @@ class VideoUploadWorker(
         Log.d("VideoUploadWorker", "🚀 Starting upload attempt $runAttempt for work: $workId")
 
         try {
+            val initialProgress = workDataOf(
+                "progress" to 0,
+                "message" to "Iniciando...",
+                "timestamp" to inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis()),
+                KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
+                KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
+                KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
+                KEY_TIME to (inputData.getString(KEY_TIME) ?: ""),
+                KEY_BPM to inputData.getInt(KEY_BPM, 0),
+                KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
+                KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+                KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
+                KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: "")
+            )
+            setProgress(initialProgress)
             setForegroundAsync(createForegroundInfo("Subiendo video... (intento $runAttempt)"))
         } catch (e: Exception) {
             Log.w("VideoUploadWorker", "⚠️ Could not set foreground: ${e.message}")
@@ -59,7 +75,6 @@ class VideoUploadWorker(
         try {
             if (isStopped) return@withContext Result.failure(createFailureData("Worker was cancelled by system"))
 
-            // Obtener URI y PATH del inputData
             val videoUriString = inputData.getString(KEY_VIDEO_URI)
             val videoPath = inputData.getString(KEY_VIDEO_PATH)
 
@@ -71,29 +86,38 @@ class VideoUploadWorker(
             val videoUri = Uri.parse(videoUriString)
             val videoFile = File(videoPath)
 
-            // Verificar que el archivo existe
             if (!videoFile.exists()) {
-                Log.e("VideoUploadWorker", "❌ Video file not found at original location: $videoPath")
+                Log.e("VideoUploadWorker", "❌ Video file not found at: $videoPath")
                 return@withContext Result.failure(
                     createFailureData("Video file not found", runAttempt)
                         .toOutputWithVideoInfo(videoUri, videoPath)
                 )
             }
 
-            Log.d("VideoUploadWorker", "📤 Uploading from ORIGINAL location:")
+            Log.d("VideoUploadWorker", "📤 Uploading from original location:")
             Log.d("VideoUploadWorker", "   📁 URI: $videoUri")
             Log.d("VideoUploadWorker", "   📁 Path: $videoPath")
             Log.d("VideoUploadWorker", "   📊 Size: ${videoFile.length() / 1024}KB")
 
+            // Extraer todos los campos de Practice del inputData
             val uid = inputData.getString(KEY_UID).orEmpty()
-            val escalaName = inputData.getString(KEY_ESCALA_NAME).orEmpty()
-            val date = inputData.getString(KEY_DATE) ?: getCurrentDate()
-            val time = inputData.getString(KEY_TIME) ?: getCurrentTime()
-            val scaleType = inputData.getString(KEY_SCALE_TYPE) ?: determineScaleType(escalaName)
-            val octaves = inputData.getInt(KEY_OCTAVES, 1)
-            val bpm = inputData.getInt(KEY_BPM, 120)
+            val practiceId = inputData.getInt(KEY_PRACTICE_ID, 0)
+            val date = inputData.getString(KEY_DATE).orEmpty()
+            val time = inputData.getString(KEY_TIME).orEmpty()
+            val scale = inputData.getString(KEY_SCALE).orEmpty()
+            val scaleType = inputData.getString(KEY_SCALE_TYPE).orEmpty()
             val duration = inputData.getInt(KEY_DURATION, 0)
+            val bpm = inputData.getInt(KEY_BPM, 120)
+            val figure = inputData.getDouble(KEY_FIGURE, 1.0)
+            val octaves = inputData.getInt(KEY_OCTAVES, 1)
+            val videoLocalRoute = inputData.getString(KEY_VIDEO_LOCAL_ROUTE) ?: videoPath
             val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
+
+            Log.d("VideoUploadWorker", "📋 Practice details:")
+            Log.d("VideoUploadWorker", "   🎵 Scale: $scale ($scaleType)")
+            Log.d("VideoUploadWorker", "   ⏱️ Duration: ${duration}s")
+            Log.d("VideoUploadWorker", "   🎼 BPM: $bpm, Figure: $figure")
+            Log.d("VideoUploadWorker", "   🔢 Octaves: $octaves")
 
             setProgressSafely(10, "Preparando...", timestamp)
 
@@ -106,16 +130,17 @@ class VideoUploadWorker(
             setProgressSafely(60, "Enviando video...", timestamp)
 
             val practice = Practice(
-                practiceId = 0,
+                uid = uid,
+                practiceId = practiceId,
                 date = date,
                 time = time,
-                duration = duration,
-                uid = uid,
-                videoLocalRoute = videoPath,
-                scale = escalaName,
+                scale = scale,
                 scaleType = scaleType,
-                reps = octaves,
-                bpm = bpm
+                duration = duration,
+                bpm = bpm,
+                figure = figure,
+                octaves = octaves,
+                videoLocalRoute = videoLocalRoute
             )
 
             val result = useCase.execute(practice, videoFile)
@@ -126,19 +151,23 @@ class VideoUploadWorker(
                 val practiceResult = result.getOrNull()
                 setProgressSafely(100, "Upload completado", timestamp)
 
-                Log.d("VideoUploadWorker", "✅ Upload successful")
+                Log.d("VideoUploadWorker", "✅ Upload successful - Practice #${practiceResult?.practiceId}")
+                Log.d("VideoUploadWorker", "📹 Video will remain in gallery at: $videoPath")
 
                 val output = workDataOf(
                     "success" to true,
                     "practice_id" to (practiceResult?.practiceId ?: 0),
-                    "scale" to escalaName,
-                    "scale_type" to scaleType,
-                    "bpm" to bpm,
-                    "octaves" to octaves,
-                    "attempts" to runAttempt,
-                    "timestamp" to timestamp,
+                    "uid" to uid,
                     "date" to date,
                     "time" to time,
+                    "scale" to scale,
+                    "scale_type" to scaleType,
+                    "bpm" to bpm,
+                    "figure" to figure,
+                    "octaves" to octaves,
+                    "duration" to duration,
+                    "attempts" to runAttempt,
+                    "timestamp" to timestamp,
                     KEY_VIDEO_URI to videoUriString,
                     KEY_VIDEO_PATH to videoPath
                 )
@@ -201,10 +230,20 @@ class VideoUploadWorker(
                 val progressData = workDataOf(
                     "progress" to progress,
                     "message" to message,
-                    "timestamp" to timestamp
+                    "timestamp" to timestamp,
+                    // Datos de práctica para mostrar en UI
+                    KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
+                    KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
+                    KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
+                    KEY_TIME to (inputData.getString(KEY_TIME) ?: ""),
+                    KEY_BPM to inputData.getInt(KEY_BPM, 0),
+                    KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
+                    KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+                    KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
+                    KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: "")
                 )
                 setProgress(progressData)
-                Log.d("VideoUploadWorker", "📊 Progress: $progress - $message")
+                Log.d("VideoUploadWorker", "📊 Progress: $progress% - $message")
             }
         } catch (e: Exception) {
             Log.e("VideoUploadWorker", "Error updating progress: ${e.message}", e)
@@ -237,20 +276,6 @@ class VideoUploadWorker(
 
         return workDataOf(*entries.toTypedArray())
     }
-
-    private fun determineScaleType(scaleName: String): String {
-        return when {
-            scaleName.contains("Major", ignoreCase = true) -> "Major"
-            scaleName.contains("Minor", ignoreCase = true) -> "Minor"
-            else -> "Major"
-        }
-    }
-
-    private fun getCurrentDate(): String =
-        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-
-    private fun getCurrentTime(): String =
-        java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
 
     private fun createForegroundInfo(contentText: String): ForegroundInfo {
         val channelId = NOTIF_CHANNEL_ID

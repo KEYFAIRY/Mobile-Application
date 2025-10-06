@@ -30,8 +30,8 @@ class ProfileFragment : BaseFragment() {
     private val binding get() = _binding!!
 
     private lateinit var profileViewModel: ProfileViewModel
-    private var currentPianoLevel: PianoLevel = PianoLevel.BEGINNER
-    private var originalPianoLevel: PianoLevel = PianoLevel.BEGINNER
+    private var currentPianoLevel: PianoLevel = PianoLevel.I
+    private var originalPianoLevel: PianoLevel = PianoLevel.I
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,18 +82,10 @@ class ProfileFragment : BaseFragment() {
     }
 
     private fun setupSpinner() {
-        val pianoLevels = PianoLevel.values().map { level ->
-            when (level) {
-                PianoLevel.BEGINNER -> "Principiante"
-                PianoLevel.INTERMEDIATE -> "Intermedio"
-                PianoLevel.ADVANCED -> "Avanzado"
-            }
-        }
-
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
-            pianoLevels
+            PianoLevel.labels()
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerPianoLevel.adapter = adapter

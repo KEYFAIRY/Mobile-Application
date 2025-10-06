@@ -14,7 +14,7 @@ object UserMapper {
             uid = response.uid,
             email = response.email,
             name = response.name,
-            pianoLevel = PianoLevel.fromString(response.pianoLevel)
+            pianoLevel = PianoLevel.fromLabel(response.pianoLevel)
         )
     }
 

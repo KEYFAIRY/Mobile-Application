@@ -1,7 +1,6 @@
 package com.example.keyfairy.feature_check_video.domain.use_case
 
 import com.example.keyfairy.feature_check_video.domain.model.Practice
-import com.example.keyfairy.feature_check_video.domain.model.PracticeResult
 import com.example.keyfairy.feature_check_video.domain.repository.PracticeRepository
 import java.io.File
 import java.text.SimpleDateFormat
@@ -14,7 +13,7 @@ class RegisterPracticeUseCase(
     private val practiceRepository: PracticeRepository
 ) {
 
-    suspend fun execute(practice: Practice, videoFile: File): Result<PracticeResult> {
+    suspend fun execute(practice: Practice, videoFile: File): Result<Practice> {
         return when {
             practice.uid.isBlank() -> {
                 Result.failure(Exception("UID de usuario es requerido"))
@@ -28,11 +27,14 @@ class RegisterPracticeUseCase(
             practice.duration <= 0 -> {
                 Result.failure(Exception("Duración debe ser mayor a 0"))
             }
-            practice.reps <= 0 -> {
+            practice.figure <= 0 -> {
                 Result.failure(Exception("Repeticiones deben ser mayor a 0"))
             }
             practice.bpm <= 0 -> {
                 Result.failure(Exception("BPM debe ser mayor a 0"))
+            }
+            practice.octaves <= 0 -> {
+                Result.failure(Exception("Octavas deben ser mayor a 0"))
             }
             !videoFile.exists() -> {
                 Result.failure(Exception("Archivo de video no encontrado"))

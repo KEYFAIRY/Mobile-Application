@@ -10,6 +10,7 @@ import com.example.keyfairy.databinding.FragmentSpeedAndDistanceBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateFragment
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.navigateAndClearStack
+import com.example.keyfairy.utils.enums.Figure
 
 class SpeedAndDistanceFragment : BaseFragment() {
 
@@ -55,19 +56,20 @@ class SpeedAndDistanceFragment : BaseFragment() {
         adapterCantidad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCantidadEscalas.adapter = adapterCantidad
 
-        // Configurar spinner de tipo de nota
-        val notas = listOf("negra", "blanca", "corchea")
-        val adapterNota = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, notas)
+        // Configurar spinner de figura musical
+        val adapterNota = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            Figure.values()
+        )
         adapterNota.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerNota.adapter = adapterNota
+
     }
 
     private fun setupClickListeners() {
         binding.buttonIniciarCalibracion.setOnClickListener {
             safeNavigate {
-                // Navegación lineal - cada fragment reemplaza al anterior sin back stack
-                // El flujo será: SpeedAndDistance → Calibrate → CalibrateCamera → PracticeExecution → CheckVideo
-                // Al final regresará directamente a PracticeFragment
                 navigateToNextStep()
             }
         }
@@ -79,13 +81,17 @@ class SpeedAndDistanceFragment : BaseFragment() {
         val nombreEscala = partes?.getOrNull(0)?.trim() ?: ""
         val notasEscala = partes?.getOrNull(1)?.trim() ?: ""
 
+        // Recuperar el valor numérico del spinner de nota
+        val selectedFigure = binding.spinnerNota.selectedItem as Figure
+        val numericValue = selectedFigure.value
+
         val fragment = CalibrateFragment().apply {
             arguments = Bundle().apply {
                 putString("escalaName", nombreEscala)
                 putInt("escalaNotes", notasEscala.split(",").size)
                 putInt("octaves", binding.spinnerCantidadEscalas.selectedItem as Int)
                 putInt("bpm", binding.spinnerMetronomo.selectedItem as Int)
-                putString("noteType", binding.spinnerNota.selectedItem as String)
+                putDouble("figure", numericValue)
                 putString("escala_data", escalaData)
             }
         }
@@ -94,17 +100,9 @@ class SpeedAndDistanceFragment : BaseFragment() {
         navigateAndClearStack(fragment, R.id.fragment_container)
     }
 
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        fun newInstance(escalaData: String) =
-            SpeedAndDistanceFragment().apply {
-                arguments = Bundle().apply {
-                    putString("escala_data", escalaData)
-                }
-            }
     }
 }

@@ -42,7 +42,7 @@ class VideoUploadManager(private val context: Context) {
                 videoFilesMap.forEach { (k, v) ->
                     val entry = JSONObject()
                     entry.put("path", v.videoPath)
-                    entry.put("uri", v.videoUri) // ✅ Persistir URI
+                    entry.put("uri", v.videoUri)
                     entry.put("ts", v.timestamp)
                     entry.put("practice", JSONObject(v.practiceJson))
                     root.put(k.toString(), entry)
@@ -65,7 +65,7 @@ class VideoUploadManager(private val context: Context) {
                     val uuid = UUID.fromString(key)
                     val entry = json.getJSONObject(key)
                     val path = entry.getString("path")
-                    val uri = entry.optString("uri", "") // ✅ Recuperar URI
+                    val uri = entry.optString("uri", "")
                     val ts = entry.optLong("ts", System.currentTimeMillis())
                     val practiceJson = entry.optJSONObject("practice")?.toString() ?: "{}"
                     videoFilesMap[uuid] = TrackedEntry(path, uri, ts, practiceJson)
@@ -82,7 +82,6 @@ class VideoUploadManager(private val context: Context) {
     fun scheduleVideoUpload(practice: Practice, videoUri: Uri): UUID {
         val currentTimestamp = System.currentTimeMillis()
 
-        // Obtener la ruta real del archivo desde el URI
         val videoPath = getPathFromUri(videoUri) ?: run {
             Log.e("VideoUploadManager", "❌ Could not get path from URI")
             throw IllegalArgumentException("Could not resolve video path from URI")
@@ -92,13 +91,16 @@ class VideoUploadManager(private val context: Context) {
             VideoUploadWorker.KEY_VIDEO_URI to videoUri.toString(),
             VideoUploadWorker.KEY_VIDEO_PATH to videoPath,
             VideoUploadWorker.KEY_UID to practice.uid,
+            VideoUploadWorker.KEY_PRACTICE_ID to practice.practiceId,
             VideoUploadWorker.KEY_DATE to practice.date,
             VideoUploadWorker.KEY_TIME to practice.time,
-            VideoUploadWorker.KEY_ESCALA_NAME to practice.scale,
+            VideoUploadWorker.KEY_SCALE to practice.scale,
             VideoUploadWorker.KEY_SCALE_TYPE to practice.scaleType,
-            VideoUploadWorker.KEY_OCTAVES to practice.reps,
-            VideoUploadWorker.KEY_BPM to practice.bpm,
             VideoUploadWorker.KEY_DURATION to practice.duration,
+            VideoUploadWorker.KEY_BPM to practice.bpm,
+            VideoUploadWorker.KEY_FIGURE to practice.figure,
+            VideoUploadWorker.KEY_OCTAVES to practice.octaves,
+            VideoUploadWorker.KEY_VIDEO_LOCAL_ROUTE to practice.videoLocalRoute,
             VideoUploadWorker.KEY_TIMESTAMP to currentTimestamp
         )
 
@@ -121,28 +123,34 @@ class VideoUploadManager(private val context: Context) {
             .build()
 
         val practiceJson = JSONObject().apply {
+            put("uid", practice.uid)
             put("practiceId", practice.practiceId)
             put("date", practice.date)
             put("time", practice.time)
-            put("uid", practice.uid)
-            put("videoLocalRoute", practice.videoLocalRoute)
             put("scale", practice.scale)
             put("scaleType", practice.scaleType)
-            put("reps", practice.reps)
-            put("bpm", practice.bpm)
             put("duration", practice.duration)
+            put("bpm", practice.bpm)
+            put("figure", practice.figure)
+            put("octaves", practice.octaves)
+            put("videoLocalRoute", practice.videoLocalRoute)
         }.toString()
 
         saveTracked(uploadWorkRequest.id, videoPath, videoUri.toString(), currentTimestamp, practiceJson)
 
-        Log.d("VideoUploadManager", "📤 Scheduling upload: ${practice.scale} (Work ID: ${uploadWorkRequest.id})")
-        Log.d("VideoUploadManager", "📁 Original URI: $videoUri")
-        Log.d("VideoUploadManager", "📁 Original Path: $videoPath")
+        Log.d("VideoUploadManager", "📤 Scheduling upload: ${practice.scale}")
+        Log.d("VideoUploadManager", "   🆔 Work ID: ${uploadWorkRequest.id}")
+        Log.d("VideoUploadManager", "   📁 URI: $videoUri")
+        Log.d("VideoUploadManager", "   📁 Path: $videoPath")
+        Log.d("VideoUploadManager", "   ⏱️ Duration: ${practice.duration}s")
+        Log.d("VideoUploadManager", "   🎵 BPM: ${practice.bpm}")
+        Log.d("VideoUploadManager", "   🎼 Figure: ${practice.figure}")
+        Log.d("VideoUploadManager", "   🔢 Octaves: ${practice.octaves}")
 
         WorkManager.getInstance(context)
             .enqueueUniqueWork(
                 "$UNIQUE_WORK_PREFIX-${uploadWorkRequest.id}",
-                androidx.work.ExistingWorkPolicy.KEEP,
+                ExistingWorkPolicy.KEEP,
                 uploadWorkRequest
             )
 
@@ -196,8 +204,7 @@ class VideoUploadManager(private val context: Context) {
             }
 
             removeTracked(workId)
-
-            Log.d("VideoUploadManager", "✅ Work cancelled and cleaned up: $workId")
+            Log.d("VideoUploadManager", "✅ Work cancelled and video deleted: $workId")
         } catch (e: Exception) {
             Log.e("VideoUploadManager", "❌ Error cancelling work: ${e.message}", e)
         }
@@ -235,16 +242,17 @@ class VideoUploadManager(private val context: Context) {
                     if (f.exists() && tracked.videoUri.isNotEmpty()) {
                         val practiceJson = JSONObject(tracked.practiceJson)
                         val practice = Practice(
+                            uid = practiceJson.optString("uid", ""),
                             practiceId = practiceJson.optInt("practiceId", 0),
                             date = practiceJson.optString("date", ""),
                             time = practiceJson.optString("time", ""),
-                            duration = practiceJson.optInt("duration", 0),
-                            uid = practiceJson.optString("uid", ""),
-                            videoLocalRoute = practiceJson.optString("videoLocalRoute", ""),
                             scale = practiceJson.optString("scale", ""),
-                            scaleType = practiceJson.optString("scaleType", "Major"),
-                            reps = practiceJson.optInt("reps", 1),
-                            bpm = practiceJson.optInt("bpm", 120)
+                            scaleType = practiceJson.optString("scaleType", "Mayor"),
+                            duration = practiceJson.optInt("duration", 0),
+                            bpm = practiceJson.optInt("bpm", 120),
+                            figure = practiceJson.optDouble("figure", 1.0),
+                            octaves = practiceJson.optInt("octaves", 1),
+                            videoLocalRoute = practiceJson.optString("videoLocalRoute", "")
                         )
                         scheduleVideoUpload(practice, Uri.parse(tracked.videoUri))
                         removeTracked(workInfo.id)
@@ -264,10 +272,10 @@ class VideoUploadManager(private val context: Context) {
     fun cleanupCompletedWork(workId: UUID) {
         try {
             val tracked = videoFilesMap.remove(workId)
-            if (tracked != null && tracked.videoUri.isNotEmpty()) {
-                deleteVideoFromMediaStore(Uri.parse(tracked.videoUri), tracked.videoPath)
+            if (tracked != null) {
                 persistMap()
-                Log.d("VideoUploadManager", "🧹 Cleaned up completed work: $workId")
+                Log.d("VideoUploadManager", "🧹 Cleaned up tracking for completed work: $workId")
+                Log.d("VideoUploadManager", "📹 Video kept in gallery: ${tracked.videoPath}")
             }
         } catch (e: Exception) {
             Log.e("VideoUploadManager", "❌ Error cleaning up completed work: ${e.message}", e)
@@ -276,18 +284,15 @@ class VideoUploadManager(private val context: Context) {
 
     private fun deleteVideoFromMediaStore(videoUri: Uri, videoPath: String) {
         try {
-            // Intentar borrar desde MediaStore primero
             val deleted = context.contentResolver.delete(videoUri, null, null)
             if (deleted > 0) {
                 Log.d("VideoUploadManager", "🗑️ Video deleted from MediaStore: $videoUri")
             } else {
                 Log.w("VideoUploadManager", "⚠️ Could not delete from MediaStore, trying filesystem")
-                // Fallback: borrar directamente del filesystem
                 deleteVideoFile(videoPath)
             }
         } catch (e: Exception) {
             Log.e("VideoUploadManager", "❌ Error deleting from MediaStore: ${e.message}")
-            // Fallback: borrar directamente del filesystem
             deleteVideoFile(videoPath)
         }
     }
@@ -319,6 +324,7 @@ class VideoUploadManager(private val context: Context) {
 
                 if (age > maxAge) {
                     Log.d("VideoUploadManager", "🧹 Removing old tracked file: ${entry.key}")
+                    // Videos viejos sí se borran automáticamente
                     if (entry.value.videoUri.isNotEmpty()) {
                         deleteVideoFromMediaStore(Uri.parse(entry.value.videoUri), entry.value.videoPath)
                     }

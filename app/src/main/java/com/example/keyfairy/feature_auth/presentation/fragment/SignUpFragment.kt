@@ -25,7 +25,7 @@ class SignUpFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var signUpViewModel: SignUpViewModel
-    private var selectedPianoLevel: PianoLevel = PianoLevel.BEGINNER
+    private var selectedPianoLevel: PianoLevel = PianoLevel.I
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,32 +55,34 @@ class SignUpFragment : Fragment() {
     }
 
     private fun setupSpinner() {
-        val pianoLevels = arrayOf("Principiante", "Intermedio", "Avanzado")
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
-            pianoLevels
+            PianoLevel.labels()
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerPianoLevel.adapter = adapter
 
+
         // Listener para capturar selección
-        binding.spinnerPianoLevel.setOnItemSelectedListener(
+        binding.spinnerPianoLevel.onItemSelectedListener =
             object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    selectedPianoLevel = when (position) {
-                        0 -> PianoLevel.BEGINNER
-                        1 -> PianoLevel.INTERMEDIATE
-                        2 -> PianoLevel.ADVANCED
-                        else -> PianoLevel.BEGINNER
-                    }
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    val selectedLabel = parent?.getItemAtPosition(position) as String
+
+                    selectedPianoLevel = PianoLevel.values().firstOrNull { it.label == selectedLabel }
+                        ?: PianoLevel.I
                 }
 
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
-                    selectedPianoLevel = PianoLevel.BEGINNER
+                    selectedPianoLevel = PianoLevel.I
                 }
             }
-        )
     }
 
     private fun setupObservers() {

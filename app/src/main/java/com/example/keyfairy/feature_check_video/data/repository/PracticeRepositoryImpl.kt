@@ -4,14 +4,15 @@ import android.util.Log
 import com.example.keyfairy.feature_check_video.data.mapper.PracticeMapper
 import com.example.keyfairy.feature_check_video.data.remote.api.PracticeApi
 import com.example.keyfairy.feature_check_video.domain.model.Practice
-import com.example.keyfairy.feature_check_video.domain.model.PracticeResult
 import com.example.keyfairy.feature_check_video.domain.repository.PracticeRepository
 import com.example.keyfairy.utils.network.RetrofitClient
+import com.example.keyfairy.utils.network.StandardResponse
 import com.google.gson.Gson
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.Response
 import java.io.File
 
 class PracticeRepositoryImpl : PracticeRepository {
@@ -20,7 +21,7 @@ class PracticeRepositoryImpl : PracticeRepository {
     private val practiceApi = RetrofitClient.createService(PracticeApi::class.java)
     private val gson = Gson()
 
-    override suspend fun registerPractice(practice: Practice, videoFile: File): Result<PracticeResult> {
+    override suspend fun registerPractice(practice: Practice, videoFile: File): Result<Practice> {
         return try {
             Log.d(TAG, "🎹 Registering practice for UID: ${practice.uid}")
 
@@ -42,10 +43,11 @@ class PracticeRepositoryImpl : PracticeRepository {
 
             if (response.isSuccessful && response.body()?.data != null) {
                 val practiceResponse = response.body()!!.data!!
-                val practiceResult = PracticeMapper.responseToResult(practiceResponse)
 
-                Log.d(TAG, "✅ Practice registered successfully - ID: ${practiceResult.practiceId}")
-                Result.success(practiceResult)
+                practice.practiceId = practiceResponse.practice_id
+
+                Log.d(TAG, "✅ Practice registered successfully - ID: ${practice.practiceId}")
+                Result.success(practice)
             } else {
                 val errorMessage = getErrorMessage(response)
                 Log.e(TAG, "❌ Practice registration failed: $errorMessage (${response.code()})")
@@ -59,7 +61,7 @@ class PracticeRepositoryImpl : PracticeRepository {
         }
     }
 
-    private fun <T> getErrorMessage(response: retrofit2.Response<com.example.keyfairy.utils.network.StandardResponse<T>>): String {
+    private fun <T> getErrorMessage(response: Response<StandardResponse<T>>): String {
         return when {
             response.body()?.message != null -> response.body()!!.message
             response.code() == 400 -> "Datos de práctica inválidos"

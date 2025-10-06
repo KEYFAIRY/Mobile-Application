@@ -98,11 +98,9 @@ class PracticeFragment : BaseFragment() {
             requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
 
-        // ✅ SOLUCIÓN: Forzar actualización del adapter cuando el fragment se vuelve visible
         refreshAdapterIfNeeded()
     }
 
-    // ✅ NUEVO: Método para asegurar que el adapter siempre tenga datos
     private fun refreshAdapterIfNeeded() {
         if (isFragmentActive && ::escalasAdapter.isInitialized) {
             // Obtener las escalas actuales del ViewModel compartido
@@ -125,7 +123,6 @@ class PracticeFragment : BaseFragment() {
         }
     }
 
-    // ✅ NUEVO: Método llamado cuando el fragment se vuelve visible desde navegación
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         if (!hidden && isFragmentActive) {

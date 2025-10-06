@@ -41,12 +41,11 @@ import org.json.JSONObject
 
 class CalibrateCameraFragment : BaseFragment() {
 
-    // Variables parametro de entrada
     private var escalaName: String? = null
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
-    private var noteType: String? = null
+    private var figure: Double? = null
     private var escalaData: String? = null
 
     private var captureHandler: Handler? = null
@@ -54,20 +53,14 @@ class CalibrateCameraFragment : BaseFragment() {
     private val CAPTURE_INTERVAL = 1000L
     private var shouldCaptureFrame = false
 
-    companion object {
-        private const val CAMERA_PERMISSION_REQUEST = 100
-    }
-
     private lateinit var previewView: PreviewView
     private lateinit var cameraExecutor: ExecutorService
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
 
-    // Variables reproduccion de audio
     private lateinit var soundPool: SoundPool
     private val soundIds = mutableMapOf<String, Int>()
 
-    // Instancia para la segmentacion
     private var segmentation: YOLO11Segmentation? = null
     private var calibratedCounts: Int = 0
 
@@ -80,7 +73,7 @@ class CalibrateCameraFragment : BaseFragment() {
             escalaNotes = bundle.getInt("escalaNotes")
             octaves = bundle.getInt("octaves")
             bpm = bundle.getInt("bpm")
-            noteType = bundle.getString("noteType")
+            figure = bundle.getDouble("figure")
             escalaData = bundle.getString("escala_data")
         }
         return inflater.inflate(R.layout.fragment_calibrate_camera, container, false)
@@ -90,6 +83,13 @@ class CalibrateCameraFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupFullscreenMode()
+
+        // Verificar permisos antes de continuar
+        if (!checkRequiredPermissions()) {
+            handleMissingPermissions()
+            return
+        }
+
         initializeComponents(view)
         setupCamera()
     }
@@ -99,11 +99,43 @@ class CalibrateCameraFragment : BaseFragment() {
         (activity as? HomeActivity)?.hideBottomNavigation()
     }
 
+    private fun checkRequiredPermissions(): Boolean {
+        val cameraGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val audioGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        Log.d("CalibrateCameraFragment", "Permissions check - Camera: $cameraGranted, Audio: $audioGranted")
+
+        return cameraGranted && audioGranted
+    }
+
+    private fun handleMissingPermissions() {
+        Log.w("CalibrateCameraFragment", "Missing required permissions - returning to previous fragment")
+
+        Toast.makeText(
+            requireContext(),
+            "Se requieren permisos de cámara y audio. Por favor, concédelos desde la pantalla de inicio.",
+            Toast.LENGTH_LONG
+        ).show()
+
+        // Regresar al fragmento anterior después de 2 segundos
+        view?.postDelayed({
+            if (isFragmentActive) {
+                requireActivity().onBackPressed()
+            }
+        }, 2000)
+    }
+
     private fun initializeComponents(view: View) {
         segmentation = YOLO11Segmentation(requireContext())
         previewView = view.findViewById(R.id.previewView)
 
-        // SoundPool setup
         soundPool = SoundPool.Builder().setMaxStreams(1).build()
         preloadSounds()
 
@@ -115,31 +147,8 @@ class CalibrateCameraFragment : BaseFragment() {
     }
 
     private fun setupCamera() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED) {
-            startCamera()
-            startAutomaticCapture()
-        } else {
-            requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            CAMERA_PERMISSION_REQUEST -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startCamera()
-                    startAutomaticCapture()
-                } else {
-                    Toast.makeText(requireContext(), "Camera permission is required", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
+        startCamera()
+        startAutomaticCapture()
     }
 
     private fun startCamera() {
@@ -170,7 +179,7 @@ class CalibrateCameraFragment : BaseFragment() {
                 cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
             } catch (exc: Exception) {
                 Log.e("CameraFragment", "Camera initialization failed", exc)
-                Toast.makeText(requireContext(), "Camera initialization failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Error al inicializar cámara", Toast.LENGTH_SHORT).show()
             }
         }, ContextCompat.getMainExecutor(requireContext()))
     }
@@ -194,7 +203,6 @@ class CalibrateCameraFragment : BaseFragment() {
                     drawCornersOnOverlay(corners, false)
                 }
 
-                // Play sound feedback
                 playSound(command)
             }
         }
@@ -214,14 +222,12 @@ class CalibrateCameraFragment : BaseFragment() {
             arguments = Bundle().apply {
                 putString("escalaName", escalaName)
                 putInt("escalaNotes", escalaNotes ?: 0)
-                putInt("octaves", octaves ?: 1)
-                putInt("bpm", bpm ?: 120)
-                putString("noteType", noteType)
+                putInt("octaves", octaves ?: 0)
+                putInt("bpm", bpm ?: 0)
+                putDouble("figure", figure ?: 0.0)
                 putString("escala_data", escalaData)
             }
         }
-
-        // Navegación lineal: reemplaza sin back stack
         navigateAndClearStack(fragment, R.id.fragment_container)
     }
 
@@ -262,7 +268,6 @@ class CalibrateCameraFragment : BaseFragment() {
         }
     }
 
-    // Rest of the methods remain the same...
     private fun imageProxyToCalibrationResult(imageProxy: ImageProxy): Pair<String, List<Pair<Int, Int>>?> {
         val image = imageProxy.image ?: return Pair("notCalibrated", null)
         try {

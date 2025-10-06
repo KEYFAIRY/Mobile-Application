@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.media.SoundPool
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -42,7 +43,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private var escalaNotes: Int? = null
     private var octaves: Int? = null
     private var bpm: Int? = null
-    private var noteType: String? = null
+    private var figure: Double? = null
     private var escalaData: String? = null
     private var videoLength: Long = 0
 
@@ -75,7 +76,7 @@ class PracticeExecutionFragment : BaseFragment() {
             escalaNotes = bundle.getInt("escalaNotes")
             octaves = bundle.getInt("octaves")
             bpm = bundle.getInt("bpm")
-            noteType = bundle.getString("noteType")
+            figure = bundle.getDouble("figure")
             escalaData = bundle.getString("escala_data")
         }
         return inflater.inflate(R.layout.fragment_practice_execution, container, false)
@@ -370,26 +371,26 @@ class PracticeExecutionFragment : BaseFragment() {
         }
     }
 
-    private fun navigateToCheckVideo(videoUri: android.net.Uri) {
+    private fun navigateToCheckVideo(videoUri: Uri) {
         safeNavigate {
             stopCamera()
             stopRepeatingSound()
 
             val videoDurationSeconds = (videoLength / 1000).toInt()
 
-            val playbackFragment = CheckVideoFragment.newInstance(
-                videoUri = videoUri,
-                escalaName = escalaName ?: "C Major",
-                escalaNotes = escalaNotes ?: 8,
-                octaves = octaves ?: 1,
-                bpm = bpm ?: 120,
-                videoDurationSeconds = videoDurationSeconds
-            ).apply {
-                arguments?.putString("noteType", noteType)
-                arguments?.putString("escala_data", escalaData)
+            val playbackFragment = CheckVideoFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelable("video_uri", videoUri)
+                    putString("escalaName", escalaName ?: "C Major")
+                    putInt("escalaNotes", escalaNotes ?: 0)
+                    putInt("octaves", octaves ?: 0)
+                    putInt("bpm", bpm ?: 0)
+                    putInt("videoDuration", videoDurationSeconds)
+                    putDouble("figure", figure ?: 0.0)
+                    putString("escala_data", escalaData)
+                }
             }
 
-            // Navegación lineal: continúa el flujo sin back stack
             navigateAndClearStack(playbackFragment, R.id.fragment_container)
         }
     }
