@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentCompletedPracticeBinding
 import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.presentation.state.PosturalErrorsState
@@ -34,6 +35,7 @@ class CompletedPracticeFragment : BaseFragment() {
             }
         }
     }
+
     private var _binding: FragmentCompletedPracticeBinding? = null
     private val binding get() = _binding!!
 
@@ -68,7 +70,13 @@ class CompletedPracticeFragment : BaseFragment() {
 
     private fun setupViewModel() {
         val factory = PosturalErrorsViewModelFactory(practiceItem.practiceId)
-        posturalErrorsViewModel = ViewModelProvider(this, factory)[PosturalErrorsViewModel::class.java]
+        // ViewModel con scope de Activity para compartir con PosturalErrorsDetailFragment
+        posturalErrorsViewModel = ViewModelProvider(
+            requireActivity(), // ← Activity scope
+            factory
+        )[PosturalErrorsViewModel::class.java]
+
+        Log.d(TAG, "✅ ViewModel setup with Activity scope")
     }
 
     private fun setupViews() {
@@ -78,17 +86,11 @@ class CompletedPracticeFragment : BaseFragment() {
 
     private fun loadData() {
         try {
-            // Cargar información básica de la práctica
             loadPracticeInfo()
-
-            // Cargar estado del PDF
             loadPdfState()
-
-            // Cargar datos de errores musicales (mock por ahora)
             loadMusicalErrorsData()
 
             Log.d(TAG, "✅ Data loaded successfully for practice ${practiceItem.practiceId}")
-
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error loading data: ${e.message}", e)
             showError("Error al cargar los datos de la práctica")
@@ -119,6 +121,7 @@ class CompletedPracticeFragment : BaseFragment() {
             is PosturalErrorsState.Loading -> {
                 Log.d(TAG, "Loading postural errors...")
                 binding.numPosturalErrors.text = "..."
+                binding.btnViewPosturalErrors.isEnabled = false
             }
             is PosturalErrorsState.Success -> {
                 Log.d(TAG, "✅ Postural errors loaded: ${state.numErrors}")
@@ -200,7 +203,6 @@ class CompletedPracticeFragment : BaseFragment() {
 
     private fun setupClickListeners() {
         with(binding) {
-            // ✅ Configurar listeners directamente con binding
             btnDownloadPdf.setOnClickListener {
                 if (isFragmentActive) {
                     safeNavigate {
@@ -250,7 +252,6 @@ class CompletedPracticeFragment : BaseFragment() {
                 startActivity(browserIntent)
                 Log.d(TAG, "🌐 Opening PDF in browser: $pdfUrl")
             }
-
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error opening PDF: ${e.message}", e)
             showError("Error al abrir el reporte PDF")
@@ -260,11 +261,41 @@ class CompletedPracticeFragment : BaseFragment() {
     private fun viewPosturalErrors() {
         Log.d(TAG, "👤 Viewing postural errors for practice ${practiceItem.practiceId}")
 
-        Toast.makeText(
-            requireContext(),
-            "Ver errores posturales de la práctica #${practiceItem.practiceId}",
-            Toast.LENGTH_SHORT
-        ).show()
+        val currentState = posturalErrorsViewModel.uiState.value
+
+        // Verificar que los datos estén cargados
+        if (currentState !is PosturalErrorsState.Success) {
+            showError("Los errores posturales aún se están cargando")
+            return
+        }
+
+        // Verificar que haya errores para mostrar
+        if (currentState.numErrors == 0) {
+            showError("No hay errores posturales para mostrar")
+            return
+        }
+
+        // Verificar que el video local exista
+        if (practiceItem.localVideoUrl.isNullOrEmpty()) {
+            showError("El video de la práctica no está disponible")
+            return
+        }
+
+        if (isFragmentActive) {
+            safeNavigate {
+                val posturalErrorsDetailFragment = PosturalErrorsDetailFragment.newInstance(
+                    practiceId = practiceItem.practiceId,
+                    videoUrl = practiceItem.localVideoUrl // Ya verificado que no es null
+                )
+
+                NavigationManager.navigateToFragment(
+                    fragmentManager = parentFragmentManager,
+                    fragment = posturalErrorsDetailFragment,
+                    containerId = R.id.fragment_container,
+                    navigationType = NavigationManager.NavigationType.REPLACE_WITH_BACK_STACK
+                )
+            }
+        }
     }
 
     private fun viewMusicalErrors() {

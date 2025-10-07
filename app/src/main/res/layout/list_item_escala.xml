@@ -13,7 +13,7 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
-        android:background="#E8EAF6">
+        android:background="@color/light_blue">
         <ImageView
         android:id="@+id/practice_button"
         android:layout_width="48dp"
