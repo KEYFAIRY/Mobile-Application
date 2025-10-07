@@ -3,7 +3,7 @@ package com.example.keyfairy.feature_reports.presentation.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.keyfairy.feature_reports.domain.model.PracticeItem
+import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.domain.usecase.GetUserPracticesUseCase
 import com.example.keyfairy.feature_reports.presentation.state.ReportsState
 import com.example.keyfairy.feature_reports.presentation.state.ReportsUiEvent
@@ -30,7 +30,7 @@ class ReportsViewModel(
     private val _uiEvent = Channel<ReportsUiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-    private val practicesList = mutableListOf<PracticeItem>()
+    private val practicesList = mutableListOf<Practice>()
     private var lastPracticeId: Int? = null
     private var isLoadingMore = false
 

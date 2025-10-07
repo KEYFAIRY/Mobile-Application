@@ -1,5 +1,6 @@
 package com.example.keyfairy.feature_reports.data.remote.api
-import com.example.keyfairy.feature_reports.data.remote.dto.response.PracticeResponseDto
+import com.example.keyfairy.feature_reports.data.remote.dto.response.PosturalErrorResponse
+import com.example.keyfairy.feature_reports.data.remote.dto.response.PracticeResponse
 import com.example.keyfairy.utils.network.StandardResponse
 import retrofit2.Response
 import retrofit2.http.GET
@@ -13,5 +14,5 @@ interface ReportsApi {
         @Path("uid") uid: String,
         @Query("last_id") lastId: Int? = null,
         @Query("limit") limit: Int? = 10
-    ): Response<StandardResponse<PracticeResponseDto>>
+    ): Response<StandardResponse<PracticeResponse>>
 }

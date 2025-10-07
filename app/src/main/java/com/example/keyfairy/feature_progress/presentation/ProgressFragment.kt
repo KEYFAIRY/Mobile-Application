@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentProgressBinding
-import com.example.keyfairy.feature_reports.presentation.ReportsFragment
+import com.example.keyfairy.feature_reports.presentation.fragment.ReportsFragment
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.navigateWithBackStack
 

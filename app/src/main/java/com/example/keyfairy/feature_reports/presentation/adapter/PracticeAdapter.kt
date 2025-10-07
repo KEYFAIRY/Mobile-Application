@@ -8,10 +8,10 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
-import com.example.keyfairy.feature_reports.domain.model.PracticeItem
+import com.example.keyfairy.feature_reports.domain.model.Practice
 
 class PracticeAdapter(
-    private val onPracticeClick: (Int) -> Unit,
+    private val onPracticeClick: (Practice) -> Unit,
     private val onLoadMore: () -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -20,11 +20,11 @@ class PracticeAdapter(
         private const val VIEW_TYPE_LOAD_MORE = 1
     }
 
-    private val practices = mutableListOf<PracticeItem>()
+    private val practices = mutableListOf<Practice>()
     private var hasMore = false
     private var isLoadingMore = false
 
-    fun submitList(newPractices: List<PracticeItem>, hasMoreData: Boolean) {
+    fun submitList(newPractices: List<Practice>, hasMoreData: Boolean) {
         val diffCallback = PracticeDiffCallback(practices, newPractices)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
@@ -90,13 +90,13 @@ class PracticeAdapter(
         private val practiceInfo: TextView = itemView.findViewById(R.id.practice_info)
         private val actionButton: Button = itemView.findViewById(R.id.action_button)
 
-        fun bind(practice: PracticeItem) {
+        fun bind(practice: Practice) {
             scaleName.text = practice.getScaleFullName()
             videoDate.text = practice.getFormattedDateTime()
             practiceInfo.text = practice.getPracticeInfo()
 
             actionButton.setOnClickListener {
-                onPracticeClick(practice.practiceId)
+                onPracticeClick(practice)
             }
         }
     }
@@ -122,8 +122,8 @@ class PracticeAdapter(
 }
 
 class PracticeDiffCallback(
-    private val oldList: List<PracticeItem>,
-    private val newList: List<PracticeItem>
+    private val oldList: List<Practice>,
+    private val newList: List<Practice>
 ) : DiffUtil.Callback() {
 
     override fun getOldListSize() = oldList.size

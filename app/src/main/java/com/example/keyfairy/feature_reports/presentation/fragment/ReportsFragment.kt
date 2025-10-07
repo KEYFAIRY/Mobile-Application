@@ -1,5 +1,4 @@
-// feature_reports/presentation/ReportsFragment.kt
-package com.example.keyfairy.feature_reports.presentation
+package com.example.keyfairy.feature_reports.presentation.fragment
 
 import android.os.Bundle
 import android.util.Log
@@ -16,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keyfairy.R
+import com.example.keyfairy.feature_reports.domain.model.Practice
+import com.example.keyfairy.feature_reports.presentation.PracticeReportActivity
 import com.example.keyfairy.feature_reports.presentation.adapter.PracticeAdapter
 import com.example.keyfairy.feature_reports.presentation.state.ReportsState
 import com.example.keyfairy.feature_reports.presentation.state.ReportsUiEvent
@@ -82,9 +83,9 @@ class ReportsFragment : BaseFragment() {
 
     private fun setupRecyclerView() {
         practiceAdapter = PracticeAdapter(
-            onPracticeClick = { practiceId ->
+            onPracticeClick = { practiceItem ->
                 if (isFragmentActive) {
-                    viewModel.onPracticeClicked(practiceId)
+                    navigateToPracticeReport(practiceItem)
                 }
             },
             onLoadMore = {
@@ -99,6 +100,11 @@ class ReportsFragment : BaseFragment() {
             adapter = practiceAdapter
             setHasFixedSize(true)
         }
+    }
+
+    private fun navigateToPracticeReport(practiceItem: Practice) {
+        val intent = PracticeReportActivity.createIntent(requireContext(), practiceItem)
+        startActivity(intent)
     }
 
     private fun setupObservers() {

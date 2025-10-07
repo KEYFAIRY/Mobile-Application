@@ -7,7 +7,7 @@
     android:background="#F5F5F5"
     android:orientation="vertical"
     android:padding="24dp"
-    tools:context=".feature_reports.presentation.ReportsFragment">
+    tools:context=".feature_reports.presentation.fragment.ReportsFragment">
 
     <TextView
         android:id="@+id/textView_title"

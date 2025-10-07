@@ -1,6 +1,10 @@
 package com.example.keyfairy.feature_reports.domain.model
 
-data class PracticeItem(
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
+data class Practice(
     val practiceId: Int,
     val scale: String,
     val scaleType: String,
@@ -13,7 +17,7 @@ data class PracticeItem(
     val state: String,
     val localVideoUrl: String?,
     val pdfUrl: String?
-) {
+) : Parcelable {
     fun getFormattedDateTime(): String = "$date, $time"
 
     fun getPracticeInfo(): String = "$bpm BPM - $octaves Octavas - $figure"

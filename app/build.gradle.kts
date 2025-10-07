@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.chaquo.python")
+    id("kotlin-parcelize")
 }
 
 android {

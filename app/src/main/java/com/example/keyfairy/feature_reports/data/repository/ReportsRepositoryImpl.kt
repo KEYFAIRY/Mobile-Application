@@ -1,10 +1,14 @@
 package com.example.keyfairy.feature_reports.data.repository
 
 import android.util.Log
+import com.example.keyfairy.feature_reports.data.mapper.PosturalErrorMapper
 import com.example.keyfairy.feature_reports.data.mapper.PracticeMapper
 import com.example.keyfairy.feature_reports.data.remote.api.ReportsApi
+import com.example.keyfairy.feature_reports.domain.model.PosturalErrorList
 import com.example.keyfairy.feature_reports.domain.model.PracticeList
 import com.example.keyfairy.feature_reports.domain.repository.ReportsRepository
+import retrofit2.HttpException
+import java.net.HttpURLConnection
 
 class ReportsRepositoryImpl(
     private val api: ReportsApi

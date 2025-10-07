@@ -1,5 +1,6 @@
 package com.example.keyfairy.feature_reports.domain.repository
 
+import com.example.keyfairy.feature_reports.domain.model.PosturalErrorList
 import com.example.keyfairy.feature_reports.domain.model.PracticeList
 
 interface ReportsRepository {

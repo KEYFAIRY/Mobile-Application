@@ -2,7 +2,7 @@ package com.example.keyfairy.feature_reports.data.remote.dto.response
 
 import com.google.gson.annotations.SerializedName
 
-data class PracticeItemDto(
+data class PracticeItem(
     @SerializedName("practice_id")
     val practiceId: Int,
 

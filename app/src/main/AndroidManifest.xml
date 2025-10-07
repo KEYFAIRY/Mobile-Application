@@ -9,10 +9,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
-
-    <!-- Foreground Service -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" /> <!-- Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -29,29 +28,31 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Keyfairy"
         tools:targetApi="31">
+        <activity
+            android:name=".feature_reports.presentation.PracticeReportActivity"
+            android:exported="false" />
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync|specialUse">
             <property
-                android:name="special-use"
+                android:name=".special-use"
                 android:value="Video upload background processing" />
         </service>
 
         <activity
             android:name=".feature_home.presentation.HomeActivity"
             android:exported="false" />
-
         <activity
             android:name=".feature_auth.presentation.activity.AuthActivity"
             android:exported="false" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
