@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.example.keyfairy.R
 import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.presentation.fragment.CompletedPracticeFragment
+import com.example.keyfairy.feature_reports.presentation.fragment.InProgressPracticeFragment
 import com.example.keyfairy.utils.common.NavigationManager
 import com.example.keyfairy.utils.enums.PracticeState
 
@@ -75,13 +76,9 @@ class PracticeReportActivity : AppCompatActivity() {
         val fragment = when (practiceItem.state.uppercase()) {
             PracticeState.IN_PROGRESS.label -> {
                 // Análisis en progreso
-                CompletedPracticeFragment.newInstance(practiceItem) // Temporal
+                InProgressPracticeFragment.newInstance(practiceItem) // Temporal
             }
-            PracticeState.ANALYZED.label -> {
-                // Análisis completado, reporte pendiente
-                CompletedPracticeFragment.newInstance(practiceItem) // Temporal
-            }
-            PracticeState.COMPLETED.label -> {
+            PracticeState.COMPLETED.label, PracticeState.ANALYZED.label -> {
                 // Terminado, listo
                 CompletedPracticeFragment.newInstance(practiceItem)
             }

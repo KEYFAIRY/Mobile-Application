@@ -1,32 +1,35 @@
 package com.example.keyfairy.feature_reports.presentation.fragment
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import com.example.keyfairy.R
+import com.example.keyfairy.databinding.FragmentCompletedPracticeBinding
+import com.example.keyfairy.databinding.FragmentInProgressPracticeBinding
+import com.example.keyfairy.feature_reports.domain.model.Practice
+import com.example.keyfairy.utils.common.BaseFragment
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+class InProgressPracticeFragment : BaseFragment() {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [InProgressPracticeFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class InProgressPracticeFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private var _binding: FragmentInProgressPracticeBinding? = null
+    private val binding get() = _binding!!
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+    private lateinit var practiceItem: Practice
+
+    companion object {
+        private const val TAG = "InProgressPracticeFragment"
+        private const val ARG_PRACTICE_ITEM = "practice_item"
+
+        fun newInstance(practiceItem: Practice): InProgressPracticeFragment {
+            return InProgressPracticeFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelable(ARG_PRACTICE_ITEM, practiceItem)
+                }
+            }
         }
     }
 
@@ -34,27 +37,50 @@ class InProgressPracticeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_in_progress_practice, container, false)
+        _binding = FragmentInProgressPracticeBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment InProgressPracticeFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            InProgressPracticeFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        extractArguments()
+        loadData()
     }
+
+    private fun extractArguments() {
+        practiceItem = arguments?.getParcelable(ARG_PRACTICE_ITEM)
+            ?: throw IllegalArgumentException("PracticeItem is required")
+
+        Log.d(InProgressPracticeFragment.Companion.TAG, "📋 Practice item received: ID=${practiceItem.practiceId}, Scale=${practiceItem.getScaleFullName()}")
+    }
+
+    private fun loadData() {
+        try {
+            loadPracticeInfo()
+            Log.d(TAG, "✅ Data loaded successfully for practice ${practiceItem.practiceId}")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error loading data: ${e.message}", e)
+            showError("Error al cargar los datos de la práctica")
+        }
+    }
+
+    private fun loadPracticeInfo() {
+        with(binding) {
+            date.text = practiceItem.date
+            hour.text = practiceItem.time
+            bpm.text = practiceItem.bpm.toString()
+            figure.text = practiceItem.figure
+            octaves.text = practiceItem.octaves.toString()
+        }
+
+        Log.d(TAG, "📋 Practice info loaded: ${practiceItem.getScaleFullName()}")
+    }
+
+    private fun showError(message: String) {
+        if (isFragmentActive) {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+        }
+    }
+
 }

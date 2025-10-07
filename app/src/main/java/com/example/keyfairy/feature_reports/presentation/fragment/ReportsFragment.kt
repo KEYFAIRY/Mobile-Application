@@ -19,7 +19,7 @@ import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.presentation.PracticeReportActivity
 import com.example.keyfairy.feature_reports.presentation.adapter.PracticeAdapter
 import com.example.keyfairy.feature_reports.presentation.state.ReportsState
-import com.example.keyfairy.feature_reports.presentation.state.ReportsUiEvent
+import com.example.keyfairy.feature_reports.presentation.state.ReportsEvent
 import com.example.keyfairy.feature_reports.presentation.viewmodel.ReportsViewModel
 import com.example.keyfairy.feature_reports.presentation.viewmodel.ReportsViewModelFactory
 import com.example.keyfairy.utils.common.BaseFragment
@@ -185,15 +185,15 @@ class ReportsFragment : BaseFragment() {
         }
     }
 
-    private fun handleUiEvent(event: ReportsUiEvent) {
+    private fun handleUiEvent(event: ReportsEvent) {
         when (event) {
-            is ReportsUiEvent.ShowError -> {
+            is ReportsEvent.ShowError -> {
                 if (isFragmentActive) {
                     Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
                 }
             }
 
-            is ReportsUiEvent.NavigateToDetails -> {
+            is ReportsEvent.NavigateToDetails -> {
                 if (isFragmentActive) {
                     // TODO: Navegar a detalles de la práctica
                     Log.d(TAG, "Navigate to practice details: ${event.practiceId}")

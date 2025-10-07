@@ -3,9 +3,9 @@ package com.example.keyfairy.feature_reports.presentation.state
 import com.example.keyfairy.feature_reports.domain.model.PosturalError
 
 
-sealed class PosturalErrorsState {
-    object Initial : PosturalErrorsState()
-    object Loading : PosturalErrorsState()
-    data class Success(val numErrors: Int, val errors: List<PosturalError>) : PosturalErrorsState()
-    data class Error(val message: String) : PosturalErrorsState()
+sealed class PracticeErrorsState {
+    object Initial : PracticeErrorsState()
+    object Loading : PracticeErrorsState()
+    data class Success(val numErrors: Int, val errors: List<PosturalError>) : PracticeErrorsState()
+    data class Error(val message: String) : PracticeErrorsState()
 }

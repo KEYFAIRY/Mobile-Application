@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cache directory para archivos temporales -->
+    <cache-path name="cache" path="." />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Files directory para archivos privados -->
+    <files-path name="files" path="." />
+
+    <!-- Downloads directory si usas downloads públicos -->
+    <external-files-path name="external_files" path="." />
+
+    <!-- Para archivos en el directorio público Downloads -->
+    <external-path name="external_storage" path="." />
+</paths>

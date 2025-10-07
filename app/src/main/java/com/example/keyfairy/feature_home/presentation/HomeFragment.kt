@@ -1,9 +1,12 @@
 package com.example.keyfairy.feature_home.presentation
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -37,7 +40,7 @@ class HomeFragment : BaseFragment() {
     private val cleanedWorks = mutableSetOf<UUID>()
     private val cancellingWorks = mutableSetOf<UUID>()
 
-    // Launcher para solicitar múltiples permisos
+    // Launcher para solicitar múltiples permisos - SOLO ACCESO COMPLETO
     private val multiplePermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -52,23 +55,7 @@ class HomeFragment : BaseFragment() {
             ).show()
         } else {
             Log.w("HomeFragment", "⚠️ Some permissions denied: $deniedPermissions")
-
-            val criticalPermissions = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
-            val hasCriticalDenied = deniedPermissions.any { it in criticalPermissions }
-
-            if (hasCriticalDenied) {
-                Toast.makeText(
-                    requireContext(),
-                    "Se necesitan permisos de cámara y audio para usar la app",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                Toast.makeText(
-                    requireContext(),
-                    "Algunos permisos opcionales fueron denegados",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            handlePermissionsDenied(deniedPermissions)
         }
     }
 
@@ -107,12 +94,41 @@ class HomeFragment : BaseFragment() {
             permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
         }
 
-        // Permiso de almacenamiento (solo para Android 9 y anteriores)
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        // Permisos de almacenamiento según la versión de Android - SOLO ACCESO COMPLETO
+        when {
+            // Android 13+ (API 33+): Permisos granulares de media - ACCESO COMPLETO
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                // Para acceso completo a videos (no scoped)
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_MEDIA_VIDEO)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsToRequest.add(Manifest.permission.READ_MEDIA_VIDEO)
+                }
+
+                // Para acceso a imágenes/PDFs
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_MEDIA_IMAGES)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsToRequest.add(Manifest.permission.READ_MEDIA_IMAGES)
+                }
+            }
+
+            // Android 10-12 (API 29-32): READ_EXTERNAL_STORAGE
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+            }
+
+            // Android 9 y anteriores (API 28-): WRITE_EXTERNAL_STORAGE (incluye READ)
+            else -> {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
             }
         }
 
@@ -128,12 +144,114 @@ class HomeFragment : BaseFragment() {
         // Solicitar permisos si hay alguno pendiente
         if (permissionsToRequest.isNotEmpty()) {
             Log.d("HomeFragment", "📋 Requesting permissions: $permissionsToRequest")
-            multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+
+            // Mostrar explicación antes de solicitar permisos críticos
+            if (permissionsToRequest.any { it in listOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_EXTERNAL_STORAGE) }) {
+                showVideoPermissionExplanation(permissionsToRequest)
+            } else {
+                multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+            }
         } else {
             Log.d("HomeFragment", "✅ All permissions already granted")
         }
     }
 
+    private fun showVideoPermissionExplanation(permissionsToRequest: List<String>) {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Permisos necesarios")
+            .setMessage(
+                "Para reproducir los videos grabados necesitamos acceso COMPLETO a tus videos.\n\n" +
+                        "⚠️ IMPORTANTE: Cuando aparezca la solicitud de permisos, asegúrate de seleccionar " +
+                        "'Permitir' para acceso completo"
+            )
+            .setPositiveButton("Continuar") { _, _ ->
+                multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+            }
+            .setNegativeButton("Cancelar", null)
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun handlePermissionsDenied(deniedPermissions: Set<String>) {
+        val criticalPermissions = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        val videoPermissions = listOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_EXTERNAL_STORAGE)
+
+        val hasCriticalDenied = deniedPermissions.any { it in criticalPermissions }
+        val hasVideoDenied = deniedPermissions.any { it in videoPermissions }
+
+        when {
+            hasCriticalDenied -> {
+                showCriticalPermissionDialog()
+            }
+            hasVideoDenied -> {
+                showVideoPermissionDialog()
+            }
+            else -> {
+                Toast.makeText(
+                    requireContext(),
+                    "Algunos permisos opcionales fueron denegados",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun showCriticalPermissionDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Permisos críticos requeridos")
+            .setMessage(
+                "Los permisos de cámara y audio son necesarios para el funcionamiento básico de la app.\n\n" +
+                        "¿Deseas ir a configuración para habilitarlos?"
+            )
+            .setPositiveButton("Ir a configuración") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Continuar sin permisos") { _, _ ->
+                Toast.makeText(
+                    requireContext(),
+                    "La app puede no funcionar correctamente sin estos permisos",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showVideoPermissionDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Acceso a videos requerido")
+            .setMessage(
+                "Para reproducir los videos grabados necesitamos acceso COMPLETO a tus videos.\n\n" +
+                        "Sin este permiso, no podrás ver los análisis de tus prácticas.\n\n" +
+                        "¿Deseas intentar de nuevo? Recuerda seleccionar 'Permitir' para acceso completo."
+            )
+            .setPositiveButton("Intentar de nuevo") { _, _ ->
+                requestAllPermissions()
+            }
+            .setNegativeButton("Continuar sin acceso") { _, _ ->
+                Toast.makeText(
+                    requireContext(),
+                    "No podrás ver los videos de análisis sin este permiso",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", requireContext().packageName, null)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error opening app settings: ${e.message}", e)
+            Toast.makeText(requireContext(), "No se pudo abrir la configuración", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ...existing code...
     private fun setupWorkManager() {
         workManager = WorkManager.getInstance(requireContext())
         videoUploadManager = VideoUploadManager(requireContext())

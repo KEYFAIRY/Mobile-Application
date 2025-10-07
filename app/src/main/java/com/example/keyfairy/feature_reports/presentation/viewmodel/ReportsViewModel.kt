@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.domain.usecase.GetUserPracticesUseCase
 import com.example.keyfairy.feature_reports.presentation.state.ReportsState
-import com.example.keyfairy.feature_reports.presentation.state.ReportsUiEvent
+import com.example.keyfairy.feature_reports.presentation.state.ReportsEvent
 import com.example.keyfairy.utils.storage.SecureStorage
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +27,7 @@ class ReportsViewModel(
     private val _uiState = MutableStateFlow<ReportsState>(ReportsState.Initial)
     val uiState: StateFlow<ReportsState> = _uiState.asStateFlow()
 
-    private val _uiEvent = Channel<ReportsUiEvent>()
+    private val _uiEvent = Channel<ReportsEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
     private val practicesList = mutableListOf<Practice>()
@@ -65,7 +65,7 @@ class ReportsViewModel(
         if (uid.isNullOrEmpty()) {
             Log.e(TAG, "No UID found in SecureStorage")
             _uiState.value = ReportsState.Error("Usuario no autenticado")
-            _uiEvent.send(ReportsUiEvent.ShowError("Usuario no autenticado"))
+            _uiEvent.send(ReportsEvent.ShowError("Usuario no autenticado"))
             return
         }
 
@@ -104,7 +104,7 @@ class ReportsViewModel(
                     )
                 } else {
                     // Si ya tenemos prácticas cargadas, mantenerlas y mostrar un mensaje
-                    _uiEvent.send(ReportsUiEvent.ShowError("Error al cargar más prácticas"))
+                    _uiEvent.send(ReportsEvent.ShowError("Error al cargar más prácticas"))
                     _uiState.value = ReportsState.Success(
                         practices = practicesList.toList(),
                         hasMore = false
@@ -116,7 +116,7 @@ class ReportsViewModel(
 
     fun onPracticeClicked(practiceId: Int) {
         viewModelScope.launch {
-            _uiEvent.send(ReportsUiEvent.NavigateToDetails(practiceId))
+            _uiEvent.send(ReportsEvent.NavigateToDetails(practiceId))
         }
     }
 
