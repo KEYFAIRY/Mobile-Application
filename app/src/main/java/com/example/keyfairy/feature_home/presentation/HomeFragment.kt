@@ -251,7 +251,6 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    // ...existing code...
     private fun setupWorkManager() {
         workManager = WorkManager.getInstance(requireContext())
         videoUploadManager = VideoUploadManager(requireContext())
@@ -281,6 +280,23 @@ class HomeFragment : BaseFragment() {
         try {
             Log.d("HomeFragment", "🚫 Cancelling upload: ${pendingVideo.scaleName} (${pendingVideo.workId})")
             cancellingWorks.add(pendingVideo.workId)
+
+            if (pendingVideo.status == WorkInfo.State.FAILED) {
+                cleanedWorks.add(pendingVideo.workId)
+
+                // Actualizar inmediatamente la lista del adapter
+                val currentList = pendingVideosAdapter.currentList.toMutableList()
+                currentList.removeAll { it.workId == pendingVideo.workId }
+                pendingVideosAdapter.submitList(currentList) {
+                    // Actualizar también el título y contador después de que se actualice la lista
+                    updatePendingVideosUI(currentList)
+                }
+
+                Toast.makeText(requireContext(), "Cancelado: ${pendingVideo.scaleName}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Cancelando: ${pendingVideo.scaleName}...", Toast.LENGTH_SHORT).show()
+            }
+
             videoUploadManager.cancelWork(pendingVideo.workId)
 
             Toast.makeText(requireContext(), "Cancelando: ${pendingVideo.scaleName}...", Toast.LENGTH_SHORT).show()
@@ -363,6 +379,13 @@ class HomeFragment : BaseFragment() {
                 }
             }
 
+            WorkInfo.State.FAILED -> {
+                if(cancellingWorks.contains(workId) && !cleanedWorks.contains(workId)) {
+                    cleanedWorks.add(workId)
+                    cancellingWorks.remove(workId)
+                }
+            }
+
             else -> {
                 if (cancellingWorks.contains(workId)) {
                     cancellingWorks.remove(workId)
@@ -411,6 +434,16 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun updatePendingVideosUI(pendingVideos: List<PendingVideo>) {
+        // Actualizar el adapter solo si no es una lista que ya procesamos manualmente
+        if (pendingVideosAdapter.currentList != pendingVideos) {
+            pendingVideosAdapter.submitList(pendingVideos.toList())
+        }
+
+        // Actualizar UI del título y contador
+        updateTitleAndCounter(pendingVideos)
+    }
+
+    private fun updateTitleAndCounter(pendingVideos: List<PendingVideo>) {
         if (pendingVideos.isEmpty()) {
             binding.pendingVideosRecycler.visibility = View.GONE
             binding.noPendingVideosLayout.visibility = View.VISIBLE
@@ -434,7 +467,6 @@ class HomeFragment : BaseFragment() {
             }
 
             binding.pendingVideosTitle.text = titleText
-            pendingVideosAdapter.submitList(pendingVideos.toList())
         }
     }
 

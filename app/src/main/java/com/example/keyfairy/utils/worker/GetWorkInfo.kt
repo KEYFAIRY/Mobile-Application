@@ -9,61 +9,98 @@ fun WorkInfo.toPendingVideo(): PendingVideo {
     return try {
         Log.d("WorkInfoExtensions", "🔍 Converting WorkInfo ID: $id, state=$state")
 
-        // WorkInfo solo tiene acceso a 'progress' y 'outputData', NO a inputData
-        // Los datos están en progress (actualizados por setProgressSafely en el Worker)
+        // Prioridad: progress -> outputData -> tags
+        val currentAttempt = progress.getInt("current_attempt", 0)
+            .takeIf { it > 0 }
+            ?: outputData.getInt("current_attempt", 0)
+                .takeIf { it > 0 }
+            ?: outputData.getInt("attempts", 0)
+                .takeIf { it > 0 }
+            ?: runAttemptCount.takeIf { it > 0 }
+            ?: 1
+
         val scale = progress.getString(VideoUploadWorker.KEY_SCALE)
             ?: outputData.getString(VideoUploadWorker.KEY_SCALE)
+            ?: extractFromTags("scale:")
+            ?: "Escala desconocida"
+
         val scaleType = progress.getString(VideoUploadWorker.KEY_SCALE_TYPE)
             ?: outputData.getString(VideoUploadWorker.KEY_SCALE_TYPE)
+            ?: extractFromTags("scaleType:")
+            ?: "Mayor"
+
         val date = progress.getString(VideoUploadWorker.KEY_DATE)
             ?: outputData.getString(VideoUploadWorker.KEY_DATE)
+            ?: extractFromTags("date:")
+            ?: getCurrentDate()
+
         val time = progress.getString(VideoUploadWorker.KEY_TIME)
             ?: outputData.getString(VideoUploadWorker.KEY_TIME)
+            ?: extractFromTags("time:")
+            ?: getCurrentTime()
 
         val bpm = progress.getInt(VideoUploadWorker.KEY_BPM, 0)
             .takeIf { it > 0 }
             ?: outputData.getInt(VideoUploadWorker.KEY_BPM, 0)
+                .takeIf { it > 0 }
+            ?: extractIntFromTags("bpm:")
+            ?: 120
 
         val figure = progress.getDouble(VideoUploadWorker.KEY_FIGURE, 0.0)
             .takeIf { it > 0.0 }
             ?: outputData.getDouble(VideoUploadWorker.KEY_FIGURE, 0.0)
+                .takeIf { it > 0.0 }
+            ?: extractDoubleFromTags("figure:")
+            ?: 1.0
 
         val octaves = progress.getInt(VideoUploadWorker.KEY_OCTAVES, 0)
             .takeIf { it > 0 }
             ?: outputData.getInt(VideoUploadWorker.KEY_OCTAVES, 0)
+                .takeIf { it > 0 }
+            ?: extractIntFromTags("octaves:")
+            ?: 1
+
+        val duration = progress.getInt(VideoUploadWorker.KEY_DURATION, 0)
+            .takeIf { it > 0 }
+            ?: outputData.getInt(VideoUploadWorker.KEY_DURATION, 0)
+                .takeIf { it > 0 }
+            ?: extractIntFromTags("duration:")
+            ?: 0
 
         val videoPath = progress.getString(VideoUploadWorker.KEY_VIDEO_PATH)
-            ?: outputData.getString(VideoUploadWorker.KEY_VIDEO_PATH) ?: ""
+            ?: outputData.getString(VideoUploadWorker.KEY_VIDEO_PATH)
+            ?: ""
 
         val timestamp = progress.getLong(VideoUploadWorker.KEY_TIMESTAMP, 0L)
             .takeIf { it > 0 }
-            ?: outputData.getLong(VideoUploadWorker.KEY_TIMESTAMP, System.currentTimeMillis())
-
-        // Validar que los datos críticos existen
-        if (scale.isNullOrEmpty() || date.isNullOrEmpty() || time.isNullOrEmpty()) {
-            Log.e("WorkInfoExtensions", "❌ Missing critical data for work: $id")
-            Log.e("WorkInfoExtensions", "   scale=$scale, date=$date, time=$time")
-            return createFallbackPendingVideo(this)
-        }
+            ?: outputData.getLong(VideoUploadWorker.KEY_TIMESTAMP, 0L)
+                .takeIf { it > 0 }
+            ?: extractLongFromTags("timestamp:")
+            ?: System.currentTimeMillis()
 
         // Progreso de subida
         val uploadProgress = progress.getInt("progress", 0)
 
-        // Intentos
-        val attempts = outputData.getInt("attempts", 0).takeIf { it > 0 } ?: runAttemptCount
+        // Obtener el mensaje del Worker
+        val statusMessage = progress.getString(VideoUploadWorker.KEY_MESSAGE)
+            ?: outputData.getString(VideoUploadWorker.KEY_MESSAGE)
+            ?: extractFromTags("Estado:")
+            ?: getDefaultStatusMessage(state)
 
-        Log.d("WorkInfoExtensions", "✅ Parsed: $scale ($scaleType)")
+        Log.d("WorkInfoExtensions", "✅ Parsed: $scale ($scaleType) - State: $state")
         Log.d("WorkInfoExtensions", "   📅 Date: $date, $time")
         Log.d("WorkInfoExtensions", "   🎵 BPM: $bpm, Octaves: $octaves, Figure: $figure")
-        Log.d("WorkInfoExtensions", "   📊 Progress: $uploadProgress%, Attempts: $attempts")
+        Log.d("WorkInfoExtensions", "   📊 Progress: $uploadProgress%, Attempts: $currentAttempt")
+        Log.d("WorkInfoExtensions", "   💬 Status message: $statusMessage")
 
         PendingVideo(
             workId = id,
             scaleName = scale,
-            scaleType = scaleType ?: "",
+            scaleType = scaleType,
             status = state,
+            message = statusMessage,
             progress = uploadProgress,
-            attempts = attempts,
+            attempts = currentAttempt,
             timestamp = timestamp,
             date = date,
             time = time,
@@ -79,26 +116,60 @@ fun WorkInfo.toPendingVideo(): PendingVideo {
     }
 }
 
+/**
+ * Obtiene un mensaje de estado por defecto solo si el Worker no proporcionó uno
+ */
+private fun getDefaultStatusMessage(state: WorkInfo.State): String {
+    return when (state) {
+        WorkInfo.State.ENQUEUED -> "En cola"
+        WorkInfo.State.RUNNING -> VideoUploadWorker.STATUS_UPLOADING
+        WorkInfo.State.BLOCKED -> VideoUploadWorker.STATUS_WAITING_INTERNET
+        WorkInfo.State.SUCCEEDED -> "Completado"
+        WorkInfo.State.FAILED -> "Falló"
+        WorkInfo.State.CANCELLED -> "Cancelado"
+    }
+}
+
+private fun WorkInfo.extractFromTags(prefix: String): String? {
+    return tags.find { it.startsWith(prefix) }?.substringAfter(prefix)
+}
+
+private fun WorkInfo.extractIntFromTags(prefix: String): Int? {
+    return extractFromTags(prefix)?.toIntOrNull()
+}
+
+private fun WorkInfo.extractDoubleFromTags(prefix: String): Double? {
+    return extractFromTags(prefix)?.toDoubleOrNull()
+}
+
+private fun WorkInfo.extractLongFromTags(prefix: String): Long? {
+    return extractFromTags(prefix)?.toLongOrNull()
+}
+
 private fun createFallbackPendingVideo(workInfo: WorkInfo): PendingVideo {
     val attempts = workInfo.outputData.getInt("attempts", 0).takeIf { it > 0 }
         ?: workInfo.runAttemptCount
 
-    Log.e("WorkInfoExtensions", "⚠️⚠️⚠️ Using FALLBACK PendingVideo for work: ${workInfo.id}")
-    Log.e("WorkInfoExtensions", "   This indicates missing data - investigate!")
+    // Intentar extraer al menos la escala de los tags como último recurso
+    val scaleFromTags = workInfo.extractFromTags("scale:") ?: "Datos incompletos"
+
+    Log.w("WorkInfoExtensions", "⚠️ Using FALLBACK PendingVideo for work: ${workInfo.id}")
+    Log.w("WorkInfoExtensions", "   Scale from tags: $scaleFromTags")
 
     return PendingVideo(
         workId = workInfo.id,
-        scaleName = "⚠️ Datos incompletos",
-        scaleType = "",
+        scaleName = scaleFromTags,
+        scaleType = workInfo.extractFromTags("scaleType:") ?: "",
         status = workInfo.state,
+        message = "Desconocido",
         progress = workInfo.progress.getInt("progress", 0),
         attempts = attempts,
-        timestamp = System.currentTimeMillis(),
-        date = getCurrentDate(),
-        time = getCurrentTime(),
-        bpm = 0,
-        figure = 0.0,
-        octaves = 0,
+        timestamp = workInfo.extractLongFromTags("timestamp:") ?: System.currentTimeMillis(),
+        date = workInfo.extractFromTags("date:") ?: getCurrentDate(),
+        time = workInfo.extractFromTags("time:") ?: getCurrentTime(),
+        bpm = workInfo.extractIntFromTags("bpm:") ?: 120,
+        figure = workInfo.extractDoubleFromTags("figure:") ?: 1.0,
+        octaves = workInfo.extractIntFromTags("octaves:") ?: 1,
         videoPath = ""
     )
 }

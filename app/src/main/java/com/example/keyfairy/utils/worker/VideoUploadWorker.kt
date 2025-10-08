@@ -17,6 +17,8 @@ import java.io.File
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.io.IOException
+import javax.net.ssl.SSLException
 
 class VideoUploadWorker(
     private val ctx: Context,
@@ -38,6 +40,14 @@ class VideoUploadWorker(
         const val KEY_OCTAVES = "octaves"
         const val KEY_VIDEO_LOCAL_ROUTE = "video_local_route"
         const val KEY_TIMESTAMP = "timestamp"
+        const val KEY_MESSAGE = "message"
+
+        // Mensajes de estado
+        const val STATUS_WAITING_INTERNET = "Esperando internet"
+        const val STATUS_WAITING_SERVER = "Esperando servidor"
+        const val STATUS_UPLOADING = "Enviando"
+        const val STATUS_NO_VIDEO = "Video borrado"
+        const val WORKER_STOPPED = "Worker detenido"
 
         const val WORK_NAME = "video_upload_work"
         private const val MAX_RETRY_COUNT = 10
@@ -47,40 +57,43 @@ class VideoUploadWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val workId = id
-        val runAttempt = runAttemptCount
+        val attemptNumber = runAttemptCount + 1
 
-        Log.d("VideoUploadWorker", "🚀 Starting upload attempt $runAttempt for work: $workId")
+        Log.d("VideoUploadWorker", "🚀 Starting upload attempt $attemptNumber/$MAX_RETRY_COUNT for work: $workId")
+
+        // Verificar conectividad al inicio
+        val hasNetwork = isNetworkAvailable()
+        Log.d("VideoUploadWorker", "📡 Initial network check: $hasNetwork")
+
+        if (!hasNetwork) {
+            Log.w("VideoUploadWorker", "📡 No network available - setting '$STATUS_WAITING_INTERNET' status")
+            setWaitingStatus(STATUS_WAITING_INTERNET, attemptNumber)
+            return@withContext Result.retry()
+        }
 
         try {
-            val initialProgress = workDataOf(
-                "progress" to 0,
-                "message" to "Iniciando...",
-                "timestamp" to inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis()),
-                KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
-                KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
-                KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
-                KEY_TIME to (inputData.getString(KEY_TIME) ?: ""),
-                KEY_BPM to inputData.getInt(KEY_BPM, 0),
-                KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
-                KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
-                KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
-                KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: "")
-            )
-            setProgress(initialProgress)
-            setForegroundAsync(createForegroundInfo("Subiendo video... (intento $runAttempt)"))
+            val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
+            val scale = inputData.getString(KEY_SCALE) ?: ""
+
+            // Establecer estado inicial como UPLOADING ya que hay internet
+            setProgressWithStatus(0, "Iniciando...", timestamp, attemptNumber, STATUS_UPLOADING)
+            setForegroundAsync(createForegroundInfo("Subiendo $scale... (intento $attemptNumber/$MAX_RETRY_COUNT)"))
         } catch (e: Exception) {
             Log.w("VideoUploadWorker", "⚠️ Could not set foreground: ${e.message}")
         }
 
         try {
-            if (isStopped) return@withContext Result.failure(createFailureData("Worker was cancelled by system"))
+            if (isStopped) {
+                Log.w("VideoUploadWorker", "🛑 Worker was stopped")
+                return@withContext Result.failure(createFailureData("Worker was cancelled by system", attemptNumber, WORKER_STOPPED))
+            }
 
             val videoUriString = inputData.getString(KEY_VIDEO_URI)
             val videoPath = inputData.getString(KEY_VIDEO_PATH)
 
             if (videoUriString.isNullOrEmpty() || videoPath.isNullOrEmpty()) {
                 Log.e("VideoUploadWorker", "❌ Video URI or path missing in inputData")
-                return@withContext Result.failure(createFailureData("Missing video URI or path"))
+                return@withContext Result.failure(createFailureData("Missing video URI or path", attemptNumber, STATUS_NO_VIDEO))
             }
 
             val videoUri = Uri.parse(videoUriString)
@@ -89,17 +102,12 @@ class VideoUploadWorker(
             if (!videoFile.exists()) {
                 Log.e("VideoUploadWorker", "❌ Video file not found at: $videoPath")
                 return@withContext Result.failure(
-                    createFailureData("Video file not found", runAttempt)
+                    createFailureData("Video file not found", attemptNumber, STATUS_NO_VIDEO)
                         .toOutputWithVideoInfo(videoUri, videoPath)
                 )
             }
 
-            Log.d("VideoUploadWorker", "📤 Uploading from original location:")
-            Log.d("VideoUploadWorker", "   📁 URI: $videoUri")
-            Log.d("VideoUploadWorker", "   📁 Path: $videoPath")
-            Log.d("VideoUploadWorker", "   📊 Size: ${videoFile.length() / 1024}KB")
-
-            // Extraer todos los campos de Practice del inputData
+            // Extraer todos los campos
             val uid = inputData.getString(KEY_UID).orEmpty()
             val practiceId = inputData.getInt(KEY_PRACTICE_ID, 0)
             val date = inputData.getString(KEY_DATE).orEmpty()
@@ -115,19 +123,18 @@ class VideoUploadWorker(
 
             Log.d("VideoUploadWorker", "📋 Practice details:")
             Log.d("VideoUploadWorker", "   🎵 Scale: $scale ($scaleType)")
-            Log.d("VideoUploadWorker", "   ⏱️ Duration: ${duration}s")
-            Log.d("VideoUploadWorker", "   🎼 BPM: $bpm, Figure: $figure")
-            Log.d("VideoUploadWorker", "   🔢 Octaves: $octaves")
+            Log.d("VideoUploadWorker", "   📊 File size: ${videoFile.length() / 1024}KB")
+            Log.d("VideoUploadWorker", "   🔄 Attempt: $attemptNumber/$MAX_RETRY_COUNT")
 
-            setProgressSafely(10, "Preparando...", timestamp)
+            setProgressWithStatus(10, "Preparando upload...", timestamp, attemptNumber, STATUS_UPLOADING)
 
             val repository = PracticeRepositoryImpl()
             val useCase = RegisterPracticeUseCase(repository)
 
-            setProgressSafely(40, "Iniciando upload...", timestamp)
-            if (isStopped) return@withContext Result.failure(createFailureData("Worker cancelled"))
+            setProgressWithStatus(30, "Conectando al servidor...", timestamp, attemptNumber, STATUS_UPLOADING)
+            if (isStopped) return@withContext Result.failure(createFailureData("Worker cancelled", attemptNumber, WORKER_STOPPED))
 
-            setProgressSafely(60, "Enviando video...", timestamp)
+            setProgressWithStatus(50, "Enviando video...", timestamp, attemptNumber, STATUS_UPLOADING)
 
             val practice = Practice(
                 uid = uid,
@@ -143,16 +150,16 @@ class VideoUploadWorker(
                 videoLocalRoute = videoLocalRoute
             )
 
+            Log.d("VideoUploadWorker", "📤 Executing upload for $scale...")
             val result = useCase.execute(practice, videoFile)
 
-            if (isStopped) return@withContext Result.failure(createFailureData("Worker cancelled"))
+            if (isStopped) return@withContext Result.failure(createFailureData("Worker cancelled", attemptNumber, WORKER_STOPPED))
 
             return@withContext if (result.isSuccess) {
                 val practiceResult = result.getOrNull()
-                setProgressSafely(100, "Upload completado", timestamp)
+                setProgressWithStatus(100, "Upload completado ✅", timestamp, attemptNumber, STATUS_UPLOADING)
 
-                Log.d("VideoUploadWorker", "✅ Upload successful - Practice #${practiceResult?.practiceId}")
-                Log.d("VideoUploadWorker", "📹 Video will remain in gallery at: $videoPath")
+                Log.d("VideoUploadWorker", "✅ Upload successful - Practice #${practiceResult?.practiceId} after $attemptNumber attempts")
 
                 val output = workDataOf(
                     "success" to true,
@@ -166,17 +173,20 @@ class VideoUploadWorker(
                     "figure" to figure,
                     "octaves" to octaves,
                     "duration" to duration,
-                    "attempts" to runAttempt,
+                    "attempts" to attemptNumber,
                     "timestamp" to timestamp,
                     KEY_VIDEO_URI to videoUriString,
-                    KEY_VIDEO_PATH to videoPath
+                    KEY_VIDEO_PATH to videoPath,
+                    KEY_MESSAGE to STATUS_UPLOADING
                 )
 
                 Result.success(output)
             } else {
-                val err = result.exceptionOrNull()
-                handleUploadError(err, err?.message ?: "Unknown error", runAttempt, videoUri, videoPath, timestamp)
+                val error = result.exceptionOrNull()
+                val errorMessage = error?.message ?: "Unknown error"
+                handleUploadError(error, errorMessage, attemptNumber, videoUri, videoPath, timestamp)
             }
+
         } catch (e: Exception) {
             Log.e("VideoUploadWorker", "💥 Exception in worker: ${e.message}", e)
             val videoUriString = inputData.getString(KEY_VIDEO_URI)
@@ -185,7 +195,7 @@ class VideoUploadWorker(
             handleUploadError(
                 e,
                 e.message ?: "Exception",
-                runAttempt,
+                attemptNumber,
                 videoUri,
                 videoPath,
                 inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
@@ -196,42 +206,181 @@ class VideoUploadWorker(
     private suspend fun handleUploadError(
         error: Throwable?,
         errorMessage: String,
-        attemptCount: Int,
+        attemptNumber: Int,
         videoUri: Uri?,
         videoPath: String?,
         timestamp: Long
     ): Result {
-        val isNetwork = isNetworkError(error, errorMessage)
-        val shouldRetry = isNetwork && attemptCount < MAX_RETRY_COUNT
+        Log.w("VideoUploadWorker", "❌ Upload error on attempt $attemptNumber/$MAX_RETRY_COUNT")
+        Log.w("VideoUploadWorker", "   🔍 Error type: ${error?.javaClass?.simpleName}")
+        Log.w("VideoUploadWorker", "   💬 Message: $errorMessage")
 
-        Log.w("VideoUploadWorker", "❌ Upload error (attempt $attemptCount) network=$isNetwork -> $errorMessage")
+        val isPermanentError = isPermanentError(error, errorMessage)
+        val shouldRetry = !isPermanentError && attemptNumber < MAX_RETRY_COUNT
+
+        Log.w("VideoUploadWorker", "   🔄 Permanent error: $isPermanentError")
+        Log.w("VideoUploadWorker", "   🔄 Will retry: $shouldRetry")
 
         return if (shouldRetry) {
-            setProgressSafely(0, "Error de conexión. Reintentando...", timestamp)
+            val nextAttempt = attemptNumber + 1
+
+            // Determinar si es un error de red/internet
+            val isNetworkError = isNetworkError(error)
+
+            // Si es un error de red, verificar la conectividad
+            val waitingStatus = if (isNetworkError) {
+                val hasInternet = isNetworkAvailable()
+                Log.d("VideoUploadWorker", "📡 Network error detected. Checking connectivity: $hasInternet")
+                if (!hasInternet) STATUS_WAITING_INTERNET else STATUS_WAITING_SERVER
+            } else {
+                // Si no es error de red, es un error del servidor
+                STATUS_WAITING_SERVER
+            }
+
+            Log.d("VideoUploadWorker", "🔄 Final status decision: $waitingStatus for retry $nextAttempt")
+            setWaitingStatus(waitingStatus, nextAttempt)
             Result.retry()
         } else {
-            val failureData = createFailureData(errorMessage, attemptCount, timestamp)
-            Result.failure(failureData.toOutputWithVideoInfo(videoUri, videoPath))
+            if (isPermanentError) {
+                Log.e("VideoUploadWorker", "❌ Permanent error detected, failing without retries")
+            } else {
+                Log.e("VideoUploadWorker", "❌ Max retries reached ($MAX_RETRY_COUNT), failing permanently")
+            }
+
+            val failureData = createFailureData(errorMessage, attemptNumber, STATUS_UPLOADING, timestamp)
+                .toOutputWithAllInfo()
+            Result.failure(failureData)
         }
     }
 
-    private fun isNetworkError(error: Throwable?, errorMessage: String): Boolean {
-        when (error) {
-            is ConnectException, is SocketTimeoutException, is UnknownHostException -> return true
+    /**
+     * Identifica si un error es relacionado con problemas de conectividad/red
+     */
+    private fun isNetworkError(error: Throwable?): Boolean {
+        return when (error) {
+            is UnknownHostException,
+            is ConnectException,
+            is SocketTimeoutException,
+            is SSLException -> true
+            is IOException -> {
+                // Revisar el mensaje para detectar problemas de red comunes
+                val message = error.message?.lowercase() ?: ""
+                message.contains("network") ||
+                        message.contains("connection") ||
+                        message.contains("host") ||
+                        message.contains("timeout") ||
+                        message.contains("unreachable")
+            }
+            else -> {
+                // Revisar la causa raíz
+                val cause = error?.cause
+                if (cause != null && cause != error) {
+                    isNetworkError(cause)
+                } else {
+                    false
+                }
+            }
         }
-
-        val keywords = listOf("network", "connection", "timeout", "unreachable", "Unable to resolve host")
-        return keywords.any { errorMessage.contains(it, ignoreCase = true) }
     }
 
-    private suspend fun setProgressSafely(progress: Int, message: String = "", timestamp: Long) {
+    /**
+     * Establece el estado de espera con el mensaje correcto
+     * CRITICAL: Usa KEY_MESSAGE para que sea leído correctamente por la UI
+     */
+    private suspend fun setWaitingStatus(statusMessage: String, attemptNumber: Int) {
+        try {
+            val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
+            val waitingProgress = workDataOf(
+                "progress" to 0,
+                "message" to "Reintentando... ($attemptNumber/$MAX_RETRY_COUNT)",
+                "timestamp" to timestamp,
+                "attempts" to attemptNumber,
+                KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
+                KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
+                KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
+                KEY_TIME to (inputData.getString(KEY_TIME) ?: ""),
+                KEY_BPM to inputData.getInt(KEY_BPM, 0),
+                KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
+                KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+                KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
+                KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
+                KEY_MESSAGE to statusMessage  // ESTO ES CRÍTICO
+            )
+            setProgress(waitingProgress)
+            Log.d("VideoUploadWorker", "📊 Set waiting status: $statusMessage (attempt $attemptNumber)")
+        } catch (e: Exception) {
+            Log.e("VideoUploadWorker", "Error setting waiting status: ${e.message}", e)
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        return try {
+            val connectivityManager =
+                ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+
+            val hasInternetCapability =
+                networkCapabilities?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            val isValidated =
+                networkCapabilities?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+
+            // Validación rápida de acceso real a internet
+            val hasRealInternet = if (hasInternetCapability) {
+                try {
+                    val url = java.net.URL("https://clients3.google.com/generate_204")
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.setRequestProperty("User-Agent", "Android")
+                    connection.setRequestProperty("Connection", "close")
+                    connection.connectTimeout = 1500
+                    connection.readTimeout = 1500
+                    connection.connect()
+                    connection.responseCode == 204
+                } catch (e: Exception) {
+                    Log.w("VideoUploadWorker", "⚠️ Active internet check failed: ${e.message}")
+                    false
+                }
+            } else false
+
+            Log.d(
+                "VideoUploadWorker",
+                "🌐 Network check: hasInternetCap=$hasInternetCapability, validated=$isValidated, realInternet=$hasRealInternet"
+            )
+
+            hasInternetCapability && (isValidated || hasRealInternet)
+        } catch (e: Exception) {
+            Log.w("VideoUploadWorker", "⚠️ Error checking network: ${e.message}")
+            false
+        }
+    }
+
+    private fun isPermanentError(error: Throwable?, errorMessage: String): Boolean {
+        val permanentErrors = listOf(
+            "file not found", "permission denied", "authentication failed",
+            "unauthorized", "invalid credentials", "missing video uri",
+            "missing video path", "400", "401", "403"
+        )
+        return permanentErrors.any { errorMessage.contains(it, ignoreCase = true) }
+    }
+
+    /**
+     * Actualiza el progreso con el mensaje de estado correcto
+     * CRITICAL: Usa KEY_MESSAGE para que sea leído correctamente por la UI
+     */
+    private suspend fun setProgressWithStatus(
+        progress: Int,
+        message: String,
+        timestamp: Long,
+        attemptNumber: Int,
+        status: String = STATUS_UPLOADING
+    ) {
         try {
             if (!isStopped) {
                 val progressData = workDataOf(
                     "progress" to progress,
                     "message" to message,
                     "timestamp" to timestamp,
-                    // Datos de práctica para mostrar en UI
+                    "attempts" to attemptNumber,
                     KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
                     KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
                     KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
@@ -240,10 +389,11 @@ class VideoUploadWorker(
                     KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
                     KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
                     KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
-                    KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: "")
+                    KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
+                    KEY_MESSAGE to status  // ESTO ES CRÍTICO
                 )
                 setProgress(progressData)
-                Log.d("VideoUploadWorker", "📊 Progress: $progress% - $message")
+                Log.d("VideoUploadWorker", "📊 Progress: $progress% - $message (status: $status)")
             }
         } catch (e: Exception) {
             Log.e("VideoUploadWorker", "Error updating progress: ${e.message}", e)
@@ -252,7 +402,8 @@ class VideoUploadWorker(
 
     private fun createFailureData(
         error: String,
-        attempts: Int = runAttemptCount,
+        attempts: Int,
+        status: String = STATUS_UPLOADING,
         timestamp: Long = System.currentTimeMillis()
     ): Data {
         return workDataOf(
@@ -260,8 +411,54 @@ class VideoUploadWorker(
             "error" to error,
             "work_id" to id.toString(),
             "attempts" to attempts,
-            "timestamp" to timestamp
+            "timestamp" to timestamp,
+            KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
+            KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
+            KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
+            KEY_TIME to (inputData.getString(KEY_TIME) ?: ""),
+            KEY_BPM to inputData.getInt(KEY_BPM, 0),
+            KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
+            KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+            KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
+            KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
+            KEY_VIDEO_URI to (inputData.getString(KEY_VIDEO_URI) ?: ""),
+            KEY_TIMESTAMP to inputData.getLong(KEY_TIMESTAMP, timestamp),
+            KEY_MESSAGE to status
         )
+    }
+
+    private fun Data.toOutputWithAllInfo(): Data {
+        val entries = this.keyValueMap.entries.map { it.key to it.value }.toMutableList()
+
+        val inputKeys = listOf(
+            KEY_VIDEO_URI, KEY_VIDEO_PATH, KEY_UID, KEY_PRACTICE_ID,
+            KEY_DATE, KEY_TIME, KEY_SCALE, KEY_SCALE_TYPE,
+            KEY_DURATION, KEY_BPM, KEY_FIGURE, KEY_OCTAVES,
+            KEY_VIDEO_LOCAL_ROUTE, KEY_TIMESTAMP
+        )
+
+        inputKeys.forEach { key ->
+            if (!this.keyValueMap.containsKey(key)) {
+                when (key) {
+                    KEY_BPM, KEY_PRACTICE_ID, KEY_DURATION, KEY_OCTAVES -> {
+                        entries.add(key to inputData.getInt(key, 0))
+                    }
+                    KEY_FIGURE -> {
+                        entries.add(key to inputData.getDouble(key, 0.0))
+                    }
+                    KEY_TIMESTAMP -> {
+                        entries.add(key to inputData.getLong(key, System.currentTimeMillis()))
+                    }
+                    else -> {
+                        inputData.getString(key)?.let { value ->
+                            entries.add(key to value)
+                        }
+                    }
+                }
+            }
+        }
+
+        return workDataOf(*entries.toTypedArray())
     }
 
     private fun Data.toOutputWithVideoInfo(videoUri: Uri?, videoPath: String?): Data {

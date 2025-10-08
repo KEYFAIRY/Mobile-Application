@@ -10,6 +10,7 @@ data class PendingVideo(
     val scaleName: String,
     val scaleType: String,
     val status: WorkInfo.State,
+    val message: String,
     val progress: Int,
     val attempts: Int,
     val timestamp: Long,
@@ -20,17 +21,6 @@ data class PendingVideo(
     val octaves: Int,
     val videoPath: String
 ) {
-    fun getStatusText(): String {
-        return when (status) {
-            WorkInfo.State.ENQUEUED -> "En cola"
-            WorkInfo.State.RUNNING -> if (progress > 0) "$progress%" else "Subiendo..."
-            WorkInfo.State.BLOCKED -> "Sin conexión"
-            WorkInfo.State.FAILED -> "Error (${attempts}/10)"
-            WorkInfo.State.SUCCEEDED -> "Completado"
-            WorkInfo.State.CANCELLED -> "Cancelado"
-        }
-    }
-
     fun getVideoDate(): String {
         return if (date.isNotEmpty() && time.isNotEmpty()) {
             // Formato: "2024-01-15, 14:30"

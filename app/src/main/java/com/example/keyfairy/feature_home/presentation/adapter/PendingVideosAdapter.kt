@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import com.example.keyfairy.R
 import com.example.keyfairy.feature_home.domain.model.PendingVideo
+import com.example.keyfairy.utils.workers.VideoUploadWorker
 
 class PendingVideosAdapter(
     private val onCancelClick: (PendingVideo) -> Unit
@@ -61,10 +62,10 @@ class PendingVideosAdapter(
         }
         holder.scaleName.text = titleText
 
-        // upload_status: Porcentaje real de subida
+        // upload_status: Usa el mensaje del Worker
         holder.uploadStatus.text = getUploadStatusText(pendingVideo)
 
-        // video_date: "Fecha, hora" (fecha/hora de cuando se grabó el video)
+        // video_date: "Fecha, hora"
         holder.videoDate.text = pendingVideo.getVideoDate()
 
         // practice_info: "<bpm> bpm, <octaves> octavas, <figure>"
@@ -72,25 +73,9 @@ class PendingVideosAdapter(
     }
 
     private fun getUploadStatusText(pendingVideo: PendingVideo): String {
-        return when (pendingVideo.status) {
-            WorkInfo.State.ENQUEUED -> "En cola para subir"
-            WorkInfo.State.RUNNING -> {
-                val progress = pendingVideo.progress
-                if (progress > 0) {
-                    "Subiendo: $progress%"
-                } else {
-                    "Subiendo: 0%"
-                }
-            }
-            WorkInfo.State.BLOCKED -> "Esperando conexión a internet"
-            WorkInfo.State.FAILED -> {
-                val attempts = pendingVideo.attempts
-                "Error de conexión (intento $attempts/10)"
-            }
-            WorkInfo.State.SUCCEEDED -> "Subido exitosamente"
-            WorkInfo.State.CANCELLED -> "Cancelado"
-            else -> "Estado desconocido"
-        }
+        val workerMessage = pendingVideo.message
+        val attempts = pendingVideo.attempts
+        return "$workerMessage\nIntento $attempts/10"
     }
 
     private fun configureStatus(holder: PendingVideoViewHolder, pendingVideo: PendingVideo) {
@@ -120,6 +105,7 @@ class PendingVideosAdapter(
             return oldItem.status == newItem.status &&
                     oldItem.progress == newItem.progress &&
                     oldItem.attempts == newItem.attempts &&
+                    oldItem.message == newItem.message &&
                     oldItem.scaleName == newItem.scaleName &&
                     oldItem.scaleType == newItem.scaleType &&
                     oldItem.bpm == newItem.bpm &&
