@@ -76,7 +76,7 @@ class PracticeReportActivity : AppCompatActivity() {
         val fragment = when (practiceItem.state.uppercase()) {
             PracticeState.IN_PROGRESS.label -> {
                 // Análisis en progreso
-                InProgressPracticeFragment.newInstance(practiceItem) // Temporal
+                InProgressPracticeFragment.newInstance(practiceItem)
             }
             PracticeState.COMPLETED.label, PracticeState.ANALYZED.label -> {
                 // Terminado, listo
@@ -88,7 +88,7 @@ class PracticeReportActivity : AppCompatActivity() {
             }
             else -> {
                 // Estado desconocido - mostrar fragmento por defecto
-                CompletedPracticeFragment.newInstance(practiceItem) // Temporal
+                InProgressPracticeFragment.newInstance(practiceItem) // Temporal
             }
         }
 
