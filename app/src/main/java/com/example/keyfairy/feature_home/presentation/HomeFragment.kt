@@ -310,7 +310,6 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun observePendingVideos() {
-        // ✅ CAMBIO: Usar el nuevo método que filtra por usuario
         videoUploadManager.observeCurrentUserPendingUploads()
             .observe(viewLifecycleOwner, Observer { workInfoList ->
                 processWorkInfoList(workInfoList)

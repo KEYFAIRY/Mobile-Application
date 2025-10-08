@@ -207,7 +207,6 @@ class VideoUploadManager(private val context: Context) {
         persistMap()
     }
 
-    // ✅ MODIFICAR: Incluir UID en TrackedEntry
     private data class TrackedEntry(
         val videoPath: String,
         val videoUri: String,
@@ -216,7 +215,6 @@ class VideoUploadManager(private val context: Context) {
         val uid: String // ✅ NUEVO
     )
 
-    // ✅ NUEVO: Observar trabajos solo del usuario actual
     fun observeCurrentUserPendingUploads(): LiveData<List<WorkInfo>> {
         val currentUserId = getCurrentUserId()
         val userTag = "$TAG_USER_PREFIX$currentUserId"
@@ -225,7 +223,6 @@ class VideoUploadManager(private val context: Context) {
         return WorkManager.getInstance(context).getWorkInfosByTagLiveData(userTag)
     }
 
-    // ✅ NUEVO: Obtener conteos solo del usuario actual
     fun getCurrentUserPendingUploadsCount(): Int {
         return try {
             val currentUserId = getCurrentUserId()
@@ -240,7 +237,6 @@ class VideoUploadManager(private val context: Context) {
         }
     }
 
-    // ✅ NUEVO: Verificar trabajos bloqueados del usuario actual
     fun currentUserHasNetworkConstrainedWork(): Boolean {
         return try {
             val currentUserId = getCurrentUserId()
@@ -254,7 +250,6 @@ class VideoUploadManager(private val context: Context) {
         }
     }
 
-    // ✅ NUEVO: Limpiar trabajos de usuarios específicos al cerrar sesión
     fun cleanupUserWork(uid: String) {
         try {
             Log.d("VideoUploadManager", "🧹 Cleaning up work for user: $uid")
@@ -288,7 +283,6 @@ class VideoUploadManager(private val context: Context) {
         }
     }
 
-    // ✅ NUEVO: Método para cambio de usuario
     fun onUserChanged(newUid: String) {
         Log.d("VideoUploadManager", "👤 User changed to: $newUid")
         // Los trabajos de otros usuarios seguirán ejecutándose en background

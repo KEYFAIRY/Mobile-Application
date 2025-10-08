@@ -12,9 +12,7 @@ object AuthenticationManager {
         videoUploadManager = VideoUploadManager(context)
     }
 
-    /**
-     * Llamar cuando el usuario hace login exitosamente
-     */
+
     fun onUserLoggedIn(uid: String) {
         Log.d(TAG, "👤 User logged in: $uid")
         videoUploadManager?.onUserChanged(uid)
@@ -26,29 +24,14 @@ object AuthenticationManager {
         }
     }
 
-    /**
-     * Llamar cuando el usuario hace logout
-     */
+
     fun onUserLoggedOut() {
         val currentUid = SecureStorage.getUid()
         Log.d(TAG, "👤 User logged out: $currentUid")
-
-        // DECISIÓN: ¿Cancelar uploads del usuario al cerrar sesión?
-        // Opción 1: Mantener uploads (recomendado)
-        // - Los uploads continuarán en background
-        // - Si el usuario vuelve a hacer login, los verá completados
-
-        // Opción 2: Cancelar uploads (más agresivo)
-        // currentUid?.let { uid ->
-        //     videoUploadManager?.cleanupUserWork(uid)
-        // }
-
         Log.d(TAG, "🔄 Uploads will continue in background for user: $currentUid")
     }
 
-    /**
-     * Obtener el manager de uploads para el usuario actual
-     */
+
     fun getVideoUploadManager(): VideoUploadManager? {
         return videoUploadManager
     }
