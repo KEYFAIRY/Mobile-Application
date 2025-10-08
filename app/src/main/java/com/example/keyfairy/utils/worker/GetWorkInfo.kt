@@ -19,6 +19,10 @@ fun WorkInfo.toPendingVideo(): PendingVideo {
             ?: runAttemptCount.takeIf { it > 0 }
             ?: 1
 
+        val statusMessage = progress.getString("message")
+            ?: outputData.getString("message")
+            ?: getDefaultStatusMessage(state)
+
         val scale = progress.getString(VideoUploadWorker.KEY_SCALE)
             ?: outputData.getString(VideoUploadWorker.KEY_SCALE)
             ?: extractFromTags("scale:")
@@ -81,11 +85,6 @@ fun WorkInfo.toPendingVideo(): PendingVideo {
         // Progreso de subida
         val uploadProgress = progress.getInt("progress", 0)
 
-        // Obtener el mensaje del Worker
-        val statusMessage = progress.getString(VideoUploadWorker.KEY_MESSAGE)
-            ?: outputData.getString(VideoUploadWorker.KEY_MESSAGE)
-            ?: extractFromTags("Estado:")
-            ?: getDefaultStatusMessage(state)
 
         Log.d("WorkInfoExtensions", "✅ Parsed: $scale ($scaleType) - State: $state")
         Log.d("WorkInfoExtensions", "   📅 Date: $date, $time")

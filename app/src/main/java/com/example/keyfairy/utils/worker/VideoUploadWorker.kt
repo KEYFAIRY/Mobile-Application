@@ -40,7 +40,6 @@ class VideoUploadWorker(
         const val KEY_OCTAVES = "octaves"
         const val KEY_VIDEO_LOCAL_ROUTE = "video_local_route"
         const val KEY_TIMESTAMP = "timestamp"
-        const val KEY_MESSAGE = "message"
 
         // Mensajes de estado
         const val STATUS_WAITING_INTERNET = "Esperando internet"
@@ -175,16 +174,16 @@ class VideoUploadWorker(
                     "duration" to duration,
                     "attempts" to attemptNumber,
                     "timestamp" to timestamp,
+                    "message" to STATUS_UPLOADING,
                     KEY_VIDEO_URI to videoUriString,
                     KEY_VIDEO_PATH to videoPath,
-                    KEY_MESSAGE to STATUS_UPLOADING
                 )
 
                 Result.success(output)
             } else {
                 val error = result.exceptionOrNull()
                 val errorMessage = error?.message ?: "Unknown error"
-                handleUploadError(error, errorMessage, attemptNumber, videoUri, videoPath, timestamp)
+                handleUploadError(error, errorMessage, attemptNumber, timestamp)
             }
 
         } catch (e: Exception) {
@@ -196,8 +195,6 @@ class VideoUploadWorker(
                 e,
                 e.message ?: "Exception",
                 attemptNumber,
-                videoUri,
-                videoPath,
                 inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
             )
         }
@@ -207,8 +204,6 @@ class VideoUploadWorker(
         error: Throwable?,
         errorMessage: String,
         attemptNumber: Int,
-        videoUri: Uri?,
-        videoPath: String?,
         timestamp: Long
     ): Result {
         Log.w("VideoUploadWorker", "❌ Upload error on attempt $attemptNumber/$MAX_RETRY_COUNT")
@@ -224,16 +219,11 @@ class VideoUploadWorker(
         return if (shouldRetry) {
             val nextAttempt = attemptNumber + 1
 
-            // Determinar si es un error de red/internet
-            val isNetworkError = isNetworkError(error)
-
-            // Si es un error de red, verificar la conectividad
-            val waitingStatus = if (isNetworkError) {
-                val hasInternet = isNetworkAvailable()
-                Log.d("VideoUploadWorker", "📡 Network error detected. Checking connectivity: $hasInternet")
-                if (!hasInternet) STATUS_WAITING_INTERNET else STATUS_WAITING_SERVER
+            // Determinar si  hay internet
+            val waitingStatus = if (!isNetworkAvailable()) {
+                Log.d("VideoUploadWorker", "📡 Network error detected.")
+                STATUS_WAITING_INTERNET
             } else {
-                // Si no es error de red, es un error del servidor
                 STATUS_WAITING_SERVER
             }
 
@@ -253,46 +243,12 @@ class VideoUploadWorker(
         }
     }
 
-    /**
-     * Identifica si un error es relacionado con problemas de conectividad/red
-     */
-    private fun isNetworkError(error: Throwable?): Boolean {
-        return when (error) {
-            is UnknownHostException,
-            is ConnectException,
-            is SocketTimeoutException,
-            is SSLException -> true
-            is IOException -> {
-                // Revisar el mensaje para detectar problemas de red comunes
-                val message = error.message?.lowercase() ?: ""
-                message.contains("network") ||
-                        message.contains("connection") ||
-                        message.contains("host") ||
-                        message.contains("timeout") ||
-                        message.contains("unreachable")
-            }
-            else -> {
-                // Revisar la causa raíz
-                val cause = error?.cause
-                if (cause != null && cause != error) {
-                    isNetworkError(cause)
-                } else {
-                    false
-                }
-            }
-        }
-    }
-
-    /**
-     * Establece el estado de espera con el mensaje correcto
-     * CRITICAL: Usa KEY_MESSAGE para que sea leído correctamente por la UI
-     */
     private suspend fun setWaitingStatus(statusMessage: String, attemptNumber: Int) {
         try {
             val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
             val waitingProgress = workDataOf(
                 "progress" to 0,
-                "message" to "Reintentando... ($attemptNumber/$MAX_RETRY_COUNT)",
+                "message" to statusMessage,
                 "timestamp" to timestamp,
                 "attempts" to attemptNumber,
                 KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
@@ -304,7 +260,6 @@ class VideoUploadWorker(
                 KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
                 KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
                 KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
-                KEY_MESSAGE to statusMessage  // ESTO ES CRÍTICO
             )
             setProgress(waitingProgress)
             Log.d("VideoUploadWorker", "📊 Set waiting status: $statusMessage (attempt $attemptNumber)")
@@ -363,22 +318,19 @@ class VideoUploadWorker(
         return permanentErrors.any { errorMessage.contains(it, ignoreCase = true) }
     }
 
-    /**
-     * Actualiza el progreso con el mensaje de estado correcto
-     * CRITICAL: Usa KEY_MESSAGE para que sea leído correctamente por la UI
-     */
+
     private suspend fun setProgressWithStatus(
         progress: Int,
         message: String,
         timestamp: Long,
         attemptNumber: Int,
-        status: String = STATUS_UPLOADING
+        status: String
     ) {
         try {
             if (!isStopped) {
                 val progressData = workDataOf(
                     "progress" to progress,
-                    "message" to message,
+                    "message" to status,
                     "timestamp" to timestamp,
                     "attempts" to attemptNumber,
                     KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
@@ -390,7 +342,6 @@ class VideoUploadWorker(
                     KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
                     KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
                     KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
-                    KEY_MESSAGE to status  // ESTO ES CRÍTICO
                 )
                 setProgress(progressData)
                 Log.d("VideoUploadWorker", "📊 Progress: $progress% - $message (status: $status)")
@@ -412,6 +363,7 @@ class VideoUploadWorker(
             "work_id" to id.toString(),
             "attempts" to attempts,
             "timestamp" to timestamp,
+            "message" to status,
             KEY_SCALE to (inputData.getString(KEY_SCALE) ?: ""),
             KEY_SCALE_TYPE to (inputData.getString(KEY_SCALE_TYPE) ?: ""),
             KEY_DATE to (inputData.getString(KEY_DATE) ?: ""),
@@ -423,7 +375,6 @@ class VideoUploadWorker(
             KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
             KEY_VIDEO_URI to (inputData.getString(KEY_VIDEO_URI) ?: ""),
             KEY_TIMESTAMP to inputData.getLong(KEY_TIMESTAMP, timestamp),
-            KEY_MESSAGE to status
         )
     }
 

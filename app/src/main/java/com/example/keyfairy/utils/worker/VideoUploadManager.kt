@@ -30,7 +30,6 @@ class VideoUploadManager(private val context: Context) {
         private const val TAG_OCTAVES_PREFIX = "octaves:"
         private const val TAG_DURATION_PREFIX = "duration:"
         private const val TAG_TIMESTAMP_PREFIX = "timestamp:"
-        private const val TAG_MESSAGE_PREFIX = "Estado:"
     }
 
     private val videoFilesMap = Collections.synchronizedMap(mutableMapOf<UUID, TrackedEntry>())
@@ -99,7 +98,6 @@ class VideoUploadManager(private val context: Context) {
             throw IllegalArgumentException("Could not resolve video path from URI")
         }
 
-        // CRITICAL: Establecer el mensaje inicial correcto
         val inputData = workDataOf(
             VideoUploadWorker.KEY_VIDEO_URI to videoUri.toString(),
             VideoUploadWorker.KEY_VIDEO_PATH to videoPath,
@@ -115,7 +113,6 @@ class VideoUploadManager(private val context: Context) {
             VideoUploadWorker.KEY_OCTAVES to practice.octaves,
             VideoUploadWorker.KEY_VIDEO_LOCAL_ROUTE to practice.videoLocalRoute,
             VideoUploadWorker.KEY_TIMESTAMP to currentTimestamp,
-            VideoUploadWorker.KEY_MESSAGE to VideoUploadWorker.STATUS_UPLOADING  // Iniciar como "Enviando"
         )
 
         val constraints = Constraints.Builder()
@@ -138,7 +135,6 @@ class VideoUploadManager(private val context: Context) {
             .addTag("$TAG_OCTAVES_PREFIX${practice.octaves}")
             .addTag("$TAG_DURATION_PREFIX${practice.duration}")
             .addTag("$TAG_TIMESTAMP_PREFIX$currentTimestamp")
-            .addTag("${TAG_MESSAGE_PREFIX}${VideoUploadWorker.STATUS_UPLOADING}")
             // Backoff: reintentar cada 15 segundos
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -236,78 +232,6 @@ class VideoUploadManager(private val context: Context) {
         }
     }
 
-    fun cancelAllPendingUploads() {
-        try {
-            Log.d("VideoUploadManager", "🚫 Cancelling all pending uploads")
-            videoFilesMap.values.forEach {
-                if (it.videoUri.isNotEmpty()) {
-                    deleteVideoFromMediaStore(Uri.parse(it.videoUri), it.videoPath)
-                }
-            }
-            videoFilesMap.clear()
-            persistMap()
-            WorkManager.getInstance(context).cancelAllWorkByTag(TAG_PENDING_UPLOADS)
-            Log.d("VideoUploadManager", "✅ All pending uploads cancelled")
-        } catch (e: Exception) {
-            Log.e("VideoUploadManager", "❌ Error cancelling all uploads: ${e.message}", e)
-        }
-    }
-
-    fun retryFailedUploads() {
-        try {
-            Log.d("VideoUploadManager", "🔄 Retrying failed uploads")
-            val workManager = WorkManager.getInstance(context)
-            val future = workManager.getWorkInfosByTag(TAG_PENDING_UPLOADS)
-            val workInfos = future.get()
-            val failedWorks = workInfos.filter { it.state == WorkInfo.State.FAILED }
-
-            failedWorks.forEach { workInfo ->
-                val tracked = videoFilesMap[workInfo.id]
-                if (tracked != null) {
-                    val f = File(tracked.videoPath)
-                    if (f.exists() && tracked.videoUri.isNotEmpty()) {
-                        try {
-                            val practiceJson = JSONObject(tracked.practiceJson)
-                            val practice = Practice(
-                                uid = practiceJson.optString("uid", ""),
-                                practiceId = practiceJson.optInt("practiceId", 0),
-                                date = practiceJson.optString("date", ""),
-                                time = practiceJson.optString("time", ""),
-                                scale = practiceJson.optString("scale", ""),
-                                scaleType = practiceJson.optString("scaleType", "Mayor"),
-                                duration = practiceJson.optInt("duration", 0),
-                                bpm = practiceJson.optInt("bpm", 120),
-                                figure = practiceJson.optDouble("figure", 1.0),
-                                octaves = practiceJson.optInt("octaves", 1),
-                                videoLocalRoute = practiceJson.optString("videoLocalRoute", "")
-                            )
-
-                            // Primero cancelar el trabajo fallido
-                            WorkManager.getInstance(context).cancelWorkById(workInfo.id)
-
-                            // Luego crear un nuevo trabajo
-                            scheduleVideoUpload(practice, Uri.parse(tracked.videoUri))
-
-                            // Limpiar el tracking del trabajo anterior
-                            removeTracked(workInfo.id)
-
-                            Log.d("VideoUploadManager", "✅ Rescheduled failed work: ${practice.scale}")
-                        } catch (e: Exception) {
-                            Log.e("VideoUploadManager", "❌ Error rescheduling work ${workInfo.id}: ${e.message}", e)
-                            removeTracked(workInfo.id)
-                            WorkManager.getInstance(context).cancelWorkById(workInfo.id)
-                        }
-                    } else {
-                        Log.w("VideoUploadManager", "⚠️ Video file missing for retry: ${tracked.videoPath}")
-                        removeTracked(workInfo.id)
-                        WorkManager.getInstance(context).cancelWorkById(workInfo.id)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("VideoUploadManager", "❌ Error retrying failed uploads: ${e.message}", e)
-        }
-    }
 
     fun cleanupCompletedWork(workId: UUID) {
         try {
