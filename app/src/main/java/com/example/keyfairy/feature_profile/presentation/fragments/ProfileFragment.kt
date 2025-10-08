@@ -23,6 +23,7 @@ import com.example.keyfairy.feature_profile.presentation.viewmodel.ProfileViewMo
 import com.example.keyfairy.feature_profile.presentation.viewmodel.ProfileViewModelFactory
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.enums.PianoLevel
+import com.example.keyfairy.utils.storage.AuthenticationManager
 
 class ProfileFragment : BaseFragment() {
 
@@ -176,6 +177,7 @@ class ProfileFragment : BaseFragment() {
         }
 
         binding.btnLogout.setOnClickListener {
+            AuthenticationManager.onUserLoggedOut()
             safeNavigate {
                 profileViewModel.logout()
             }

@@ -5,8 +5,10 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.work.*
 import com.example.keyfairy.feature_check_video.domain.model.Practice
+import com.example.keyfairy.utils.storage.SecureStorage
 import org.json.JSONObject
 import java.io.File
 import java.util.*
@@ -15,6 +17,7 @@ import java.util.concurrent.TimeUnit
 class VideoUploadManager(private val context: Context) {
 
     companion object {
+        private const val TAG_USER_PREFIX = "user:"
         private const val UNIQUE_WORK_PREFIX = "video_upload_work"
         private const val TAG_PENDING_UPLOADS = "pending_video_uploads"
         private const val PREFS_NAME = "video_upload_manager_prefs"
@@ -35,15 +38,12 @@ class VideoUploadManager(private val context: Context) {
     private val videoFilesMap = Collections.synchronizedMap(mutableMapOf<UUID, TrackedEntry>())
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private data class TrackedEntry(
-        val videoPath: String,
-        val videoUri: String,
-        val timestamp: Long,
-        val practiceJson: String
-    )
-
     init {
         recoverPersistedMap()
+    }
+
+    private fun getCurrentUserId(): String {
+        return SecureStorage.getUid() ?: ""
     }
 
     private fun persistMap() {
@@ -56,6 +56,7 @@ class VideoUploadManager(private val context: Context) {
                     entry.put("uri", v.videoUri)
                     entry.put("ts", v.timestamp)
                     entry.put("practice", JSONObject(v.practiceJson))
+                    entry.put("uid", v.uid) // ✅ NUEVO
                     root.put(k.toString(), entry)
                 }
             }
@@ -79,7 +80,8 @@ class VideoUploadManager(private val context: Context) {
                     val uri = entry.optString("uri", "")
                     val ts = entry.optLong("ts", System.currentTimeMillis())
                     val practiceJson = entry.optJSONObject("practice")?.toString() ?: "{}"
-                    videoFilesMap[uuid] = TrackedEntry(path, uri, ts, practiceJson)
+                    val uid = entry.optString("uid", "anonymous") // ✅ NUEVO
+                    videoFilesMap[uuid] = TrackedEntry(path, uri, ts, practiceJson, uid)
                 } catch (e: Exception) {
                     Log.w("VideoUploadManager", "⚠️ Skipping invalid tracked entry: $key")
                 }
@@ -92,6 +94,7 @@ class VideoUploadManager(private val context: Context) {
 
     fun scheduleVideoUpload(practice: Practice, videoUri: Uri): UUID {
         val currentTimestamp = System.currentTimeMillis()
+        val currentUserId = getCurrentUserId()
 
         val videoPath = getPathFromUri(videoUri) ?: run {
             Log.e("VideoUploadManager", "❌ Could not get path from URI")
@@ -126,6 +129,7 @@ class VideoUploadManager(private val context: Context) {
             .setConstraints(constraints)
             .addTag(VideoUploadWorker.WORK_NAME)
             .addTag(TAG_PENDING_UPLOADS)
+            .addTag("$TAG_USER_PREFIX${practice.uid}")
             .addTag("$TAG_SCALE_PREFIX${practice.scale}")
             .addTag("$TAG_SCALE_TYPE_PREFIX${practice.scaleType}")
             .addTag("$TAG_DATE_PREFIX${practice.date}")
@@ -157,7 +161,7 @@ class VideoUploadManager(private val context: Context) {
             put("videoLocalRoute", practice.videoLocalRoute)
         }.toString()
 
-        saveTracked(uploadWorkRequest.id, videoPath, videoUri.toString(), currentTimestamp, practiceJson)
+        saveTracked(uploadWorkRequest.id, videoPath, videoUri.toString(), currentTimestamp, practiceJson, practice.uid)
 
         Log.d("VideoUploadManager", "📤 Scheduling upload with tags: ${practice.scale}")
         Log.d("VideoUploadManager", "   🆔 Work ID: ${uploadWorkRequest.id}")
@@ -198,20 +202,105 @@ class VideoUploadManager(private val context: Context) {
         }
     }
 
-    private fun saveTracked(workId: UUID, videoPath: String, videoUri: String, timestamp: Long, practiceJson: String) {
-        videoFilesMap[workId] = TrackedEntry(videoPath, videoUri, timestamp, practiceJson)
+    private fun saveTracked(workId: UUID, videoPath: String, videoUri: String, timestamp: Long, practiceJson: String, uid: String) {
+        videoFilesMap[workId] = TrackedEntry(videoPath, videoUri, timestamp, practiceJson, uid)
         persistMap()
+    }
+
+    // ✅ MODIFICAR: Incluir UID en TrackedEntry
+    private data class TrackedEntry(
+        val videoPath: String,
+        val videoUri: String,
+        val timestamp: Long,
+        val practiceJson: String,
+        val uid: String // ✅ NUEVO
+    )
+
+    // ✅ NUEVO: Observar trabajos solo del usuario actual
+    fun observeCurrentUserPendingUploads(): LiveData<List<WorkInfo>> {
+        val currentUserId = getCurrentUserId()
+        val userTag = "$TAG_USER_PREFIX$currentUserId"
+
+        Log.d("VideoUploadManager", "👀 Observing uploads for user: $currentUserId")
+        return WorkManager.getInstance(context).getWorkInfosByTagLiveData(userTag)
+    }
+
+    // ✅ NUEVO: Obtener conteos solo del usuario actual
+    fun getCurrentUserPendingUploadsCount(): Int {
+        return try {
+            val currentUserId = getCurrentUserId()
+            val userTag = "$TAG_USER_PREFIX$currentUserId"
+
+            val workInfosFuture = WorkManager.getInstance(context).getWorkInfosByTag(userTag)
+            val workInfos = workInfosFuture.get()
+            workInfos.count { it.state !in listOf(WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED) }
+        } catch (e: Exception) {
+            Log.e("VideoUploadManager", "Error getting current user pending count: ${e.message}")
+            0
+        }
+    }
+
+    // ✅ NUEVO: Verificar trabajos bloqueados del usuario actual
+    fun currentUserHasNetworkConstrainedWork(): Boolean {
+        return try {
+            val currentUserId = getCurrentUserId()
+            val userTag = "$TAG_USER_PREFIX$currentUserId"
+
+            val workInfosFuture = WorkManager.getInstance(context).getWorkInfosByTag(userTag)
+            val workInfos = workInfosFuture.get()
+            workInfos.any { it.state == WorkInfo.State.BLOCKED }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // ✅ NUEVO: Limpiar trabajos de usuarios específicos al cerrar sesión
+    fun cleanupUserWork(uid: String) {
+        try {
+            Log.d("VideoUploadManager", "🧹 Cleaning up work for user: $uid")
+
+            // Cancelar trabajos pendientes del usuario
+            val userTag = "$TAG_USER_PREFIX$uid"
+            WorkManager.getInstance(context).cancelAllWorkByTag(userTag)
+
+            // Limpiar archivos tracked del usuario
+            val iterator = videoFilesMap.iterator()
+            var cleanedCount = 0
+
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry.value.uid == uid) {
+                    Log.d("VideoUploadManager", "🗑️ Removing tracked file for user $uid: ${entry.key}")
+                    if (entry.value.videoUri.isNotEmpty()) {
+                        deleteVideoFromMediaStore(Uri.parse(entry.value.videoUri), entry.value.videoPath)
+                    }
+                    iterator.remove()
+                    cleanedCount++
+                }
+            }
+
+            if (cleanedCount > 0) {
+                persistMap()
+                Log.d("VideoUploadManager", "🧹 Cleaned $cleanedCount files for user: $uid")
+            }
+        } catch (e: Exception) {
+            Log.e("VideoUploadManager", "❌ Error cleaning user work: ${e.message}", e)
+        }
+    }
+
+    // ✅ NUEVO: Método para cambio de usuario
+    fun onUserChanged(newUid: String) {
+        Log.d("VideoUploadManager", "👤 User changed to: $newUid")
+        // Los trabajos de otros usuarios seguirán ejecutándose en background
+        // pero la UI solo mostrará los del usuario actual
     }
 
     private fun removeTracked(workId: UUID) {
         videoFilesMap.remove(workId)
         persistMap()
     }
-
     fun observeWorkStatus(workId: UUID) = WorkManager.getInstance(context).getWorkInfoByIdLiveData(workId)
-
     fun observeAllPendingUploads() = WorkManager.getInstance(context).getWorkInfosByTagLiveData(TAG_PENDING_UPLOADS)
-
     fun cancelWork(workId: UUID) {
         try {
             Log.d("VideoUploadManager", "🚫 Cancelling work: $workId")
@@ -231,8 +320,6 @@ class VideoUploadManager(private val context: Context) {
             Log.e("VideoUploadManager", "❌ Error cancelling work: ${e.message}", e)
         }
     }
-
-
     fun cleanupCompletedWork(workId: UUID) {
         try {
             val tracked = videoFilesMap.remove(workId)
@@ -245,7 +332,6 @@ class VideoUploadManager(private val context: Context) {
             Log.e("VideoUploadManager", "❌ Error cleaning up completed work: ${e.message}", e)
         }
     }
-
     private fun deleteVideoFromMediaStore(videoUri: Uri, videoPath: String) {
         try {
             val deleted = context.contentResolver.delete(videoUri, null, null)
@@ -260,7 +346,6 @@ class VideoUploadManager(private val context: Context) {
             deleteVideoFile(videoPath)
         }
     }
-
     private fun deleteVideoFile(videoPath: String) {
         try {
             val videoFile = File(videoPath)
@@ -273,7 +358,6 @@ class VideoUploadManager(private val context: Context) {
             Log.e("VideoUploadManager", "❌ Error deleting video file: ${e.message}", e)
         }
     }
-
     private fun cleanupOldTrackedFiles() {
         try {
             val now = System.currentTimeMillis()
@@ -304,7 +388,6 @@ class VideoUploadManager(private val context: Context) {
             Log.e("VideoUploadManager", "❌ Error cleaning old files: ${e.message}")
         }
     }
-
     fun getPendingUploadsCount(): Int {
         return try {
             val workInfosFuture = WorkManager.getInstance(context).getWorkInfosByTag(TAG_PENDING_UPLOADS)
@@ -315,9 +398,7 @@ class VideoUploadManager(private val context: Context) {
             0
         }
     }
-
     fun getTrackedFilesCount(): Int = videoFilesMap.size
-
     fun hasNetworkConstrainedWork(): Boolean {
         return try {
             val workInfosFuture = WorkManager.getInstance(context).getWorkInfosByTag(TAG_PENDING_UPLOADS)

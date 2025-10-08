@@ -22,6 +22,7 @@ import com.example.keyfairy.databinding.FragmentHomeBinding
 import com.example.keyfairy.feature_home.domain.model.PendingVideo
 import com.example.keyfairy.feature_home.presentation.adapter.PendingVideosAdapter
 import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.storage.AuthenticationManager
 import com.example.keyfairy.utils.worker.toPendingVideo
 import com.example.keyfairy.utils.workers.VideoUploadManager
 import com.example.keyfairy.utils.workers.VideoUploadWorker
@@ -252,8 +253,8 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupWorkManager() {
+        videoUploadManager = AuthenticationManager.getVideoUploadManager() ?: throw IllegalStateException("VideoUploadManager is null")
         workManager = WorkManager.getInstance(requireContext())
-        videoUploadManager = VideoUploadManager(requireContext())
     }
 
     private fun setupPendingVideosRecyclerView() {
@@ -309,7 +310,8 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun observePendingVideos() {
-        workManager.getWorkInfosByTagLiveData(VideoUploadWorker.WORK_NAME)
+        // ✅ CAMBIO: Usar el nuevo método que filtra por usuario
+        videoUploadManager.observeCurrentUserPendingUploads()
             .observe(viewLifecycleOwner, Observer { workInfoList ->
                 processWorkInfoList(workInfoList)
             })
@@ -472,9 +474,10 @@ class HomeFragment : BaseFragment() {
 
     private fun setupClickListeners() {
         binding.pendingVideosCard.setOnLongClickListener {
+            // ✅ CAMBIO: Usar métodos específicos del usuario actual
             val trackedCount = videoUploadManager.getTrackedFilesCount()
-            val pendingCount = videoUploadManager.getPendingUploadsCount()
-            val hasBlocked = videoUploadManager.hasNetworkConstrainedWork()
+            val pendingCount = videoUploadManager.getCurrentUserPendingUploadsCount()
+            val hasBlocked = videoUploadManager.currentUserHasNetworkConstrainedWork()
 
             Log.d("HomeFragment", "📊 Debug Info: tracked=$trackedCount pending=$pendingCount blocked=$hasBlocked")
             Toast.makeText(requireContext(), "Debug: $trackedCount tracked, $pendingCount pending", Toast.LENGTH_SHORT).show()

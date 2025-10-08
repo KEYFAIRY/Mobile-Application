@@ -16,6 +16,8 @@ import com.example.keyfairy.feature_auth.presentation.state.LoginState
 import com.example.keyfairy.feature_auth.presentation.viewmodel.LoginViewModel
 import com.example.keyfairy.feature_auth.presentation.viewmodel.LoginViewModelFactory
 import com.example.keyfairy.feature_home.presentation.HomeActivity
+import com.example.keyfairy.utils.storage.AuthenticationManager
+import com.example.keyfairy.utils.storage.SecureStorage
 
 class LoginFragment : Fragment() {
 
@@ -59,6 +61,7 @@ class LoginFragment : Fragment() {
                     showLoading()
                 }
                 is LoginState.Success -> {
+                    AuthenticationManager.onUserLoggedIn(SecureStorage.getUid() ?: "")
                     hideLoading()
                     navigateToHome()
                 }
