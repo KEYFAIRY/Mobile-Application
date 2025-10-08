@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.keyfairy.feature_reports.domain.model.Practice
+import com.example.keyfairy.feature_reports.domain.usecase.GetPracticeByIdUseCase
 import com.example.keyfairy.feature_reports.domain.usecase.GetUserPracticesUseCase
 import com.example.keyfairy.feature_reports.presentation.state.ReportsState
 import com.example.keyfairy.feature_reports.presentation.state.ReportsEvent
@@ -16,7 +17,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class ReportsViewModel(
-    private val getUserPracticesUseCase: GetUserPracticesUseCase
+    private val getUserPracticesUseCase: GetUserPracticesUseCase,
+    private val getPracticeByIdUseCase: GetPracticeByIdUseCase
 ) : ViewModel() {
 
     companion object {
@@ -112,6 +114,35 @@ class ReportsViewModel(
                 }
             }
         )
+    }
+
+    fun getPracticeAndNavigate(practiceId: Int) {
+        viewModelScope.launch {
+            val uid = SecureStorage.getUid()
+
+            if (uid.isNullOrEmpty()) {
+                Log.e(TAG, "No UID found")
+                _uiEvent.send(ReportsEvent.ShowError("Usuario no autenticado"))
+                return@launch
+            }
+
+            Log.d(TAG, "Fetching updated practice $practiceId before navigation")
+
+            val result = getPracticeByIdUseCase.execute(uid, practiceId)
+
+            result.fold(
+                onSuccess = { practice ->
+                    Log.d(TAG, "Practice $practiceId fetched successfully, navigating...")
+                    _uiEvent.send(ReportsEvent.NavigateToDetailsWithData(practice))
+                },
+                onFailure = { exception ->
+                    Log.e(TAG, "Error fetching practice: ${exception.message}", exception)
+                    _uiEvent.send(ReportsEvent.ShowError(
+                        exception.message ?: "Error al cargar la práctica"
+                    ))
+                }
+            )
+        }
     }
 
     fun onPracticeClicked(practiceId: Int) {

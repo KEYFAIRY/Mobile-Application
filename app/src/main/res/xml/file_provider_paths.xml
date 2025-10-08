@@ -9,6 +9,9 @@
     <!-- Downloads directory si usas downloads públicos -->
     <external-files-path name="external_files" path="." />
 
-    <!-- Para archivos en el directorio público Downloads -->
+    <!-- Para archivos en el directorio público Downloads - CORREGIDO -->
+    <external-path name="downloads" path="Download/" />
+
+    <!-- Para acceso completo al storage externo -->
     <external-path name="external_storage" path="." />
 </paths>

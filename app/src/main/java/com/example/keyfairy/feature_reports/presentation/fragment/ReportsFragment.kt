@@ -85,7 +85,7 @@ class ReportsFragment : BaseFragment() {
         practiceAdapter = PracticeAdapter(
             onPracticeClick = { practiceItem ->
                 if (isFragmentActive) {
-                    navigateToPracticeReport(practiceItem)
+                    viewModel.getPracticeAndNavigate(practiceItem.practiceId)
                 }
             },
             onLoadMore = {
@@ -100,11 +100,6 @@ class ReportsFragment : BaseFragment() {
             adapter = practiceAdapter
             setHasFixedSize(true)
         }
-    }
-
-    private fun navigateToPracticeReport(practiceItem: Practice) {
-        val intent = PracticeReportActivity.createIntent(requireContext(), practiceItem)
-        startActivity(intent)
     }
 
     private fun setupObservers() {
@@ -180,7 +175,10 @@ class ReportsFragment : BaseFragment() {
                 showLoading(false)
                 showContent(false)
                 showEmpty(false)
-                showError(true, state.message)
+
+                // Procesar el mensaje de error para detectar problemas de conectividad
+                val processedMessage = processErrorMessage(state.message)
+                showError(true, processedMessage)
             }
         }
     }
@@ -189,13 +187,14 @@ class ReportsFragment : BaseFragment() {
         when (event) {
             is ReportsEvent.ShowError -> {
                 if (isFragmentActive) {
-                    Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
+                    // Procesar el mensaje de error antes de mostrarlo en el toast
+                    val processedMessage = processErrorMessage(event.message)
+                    showErrorToast(processedMessage)
                 }
             }
 
             is ReportsEvent.NavigateToDetails -> {
                 if (isFragmentActive) {
-                    // TODO: Navegar a detalles de la práctica
                     Log.d(TAG, "Navigate to practice details: ${event.practiceId}")
                     Toast.makeText(
                         requireContext(),
@@ -204,6 +203,84 @@ class ReportsFragment : BaseFragment() {
                     ).show()
                 }
             }
+
+            is ReportsEvent.NavigateToDetailsWithData -> {
+                navigateToPracticeReport(event.practice)
+            }
+        }
+    }
+
+    private fun navigateToPracticeReport(practiceItem: Practice) {
+        val intent = PracticeReportActivity.createIntent(requireContext(), practiceItem)
+        startActivity(intent)
+    }
+
+    // -------------------------------------------------------------------------
+    // PROCESAMIENTO DE ERRORES DE CONECTIVIDAD
+    // -------------------------------------------------------------------------
+    private fun processErrorMessage(originalMessage: String): String {
+        val lowerMessage = originalMessage.lowercase()
+
+        return when {
+            // Errores de conectividad de red
+            lowerMessage.contains("unable to resolve host") ||
+                    lowerMessage.contains("unable to reach host") ||
+                    lowerMessage.contains("no route to host") ||
+                    lowerMessage.contains("network is unreachable") ||
+                    lowerMessage.contains("connection timed out") ||
+                    lowerMessage.contains("connection refused") ||
+                    lowerMessage.contains("network error") ||
+                    lowerMessage.contains("no internet") ||
+                    lowerMessage.contains("timeout") -> {
+                Log.d(TAG, "🌐 Network connectivity error detected: $originalMessage")
+                "Sin conexión a internet. Verifica tu conexión y vuelve a intentar."
+            }
+
+            // Errores de DNS
+            lowerMessage.contains("name resolution failed") ||
+                    lowerMessage.contains("unknown host") ||
+                    lowerMessage.contains("dns") -> {
+                Log.d(TAG, "🌐 DNS error detected: $originalMessage")
+                "Error de conectividad. Verifica tu conexión a internet."
+            }
+
+            // Errores SSL/Certificados
+            lowerMessage.contains("ssl") ||
+                    lowerMessage.contains("certificate") ||
+                    lowerMessage.contains("handshake") -> {
+                Log.d(TAG, "🔒 SSL/Certificate error detected: $originalMessage")
+                "Error de conexión segura. Verifica tu conexión a internet."
+            }
+
+            // Errores HTTP específicos
+            lowerMessage.contains("http") && (
+                    lowerMessage.contains("500") ||
+                            lowerMessage.contains("502") ||
+                            lowerMessage.contains("503") ||
+                            lowerMessage.contains("504")
+                    ) -> {
+                Log.d(TAG, "🌐 Server error detected: $originalMessage")
+                "El servidor no está disponible temporalmente. Intenta más tarde."
+            }
+
+            // Si no es un error de conectividad conocido, devolver mensaje original
+            else -> {
+                Log.d(TAG, "❓ Non-connectivity error: $originalMessage")
+                originalMessage
+            }
+        }
+    }
+
+    private fun showErrorToast(message: String) {
+        val isConnectivityError = message.contains("conexión") ||
+                message.contains("internet") ||
+                message.contains("conectividad")
+
+        if (isConnectivityError) {
+            Log.d(TAG, "📱 Showing connectivity error toast")
+            Toast.makeText(requireContext(), "📡 $message", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
 
