@@ -208,10 +208,10 @@ class PosturalErrorsDetailFragment : BaseFragment() {
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            practiceErrorsViewModel.uiState.collect { handleState(it) }
+            practiceErrorsViewModel.posturalErrorsState.collect { handleState(it) }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            practiceErrorsViewModel.uiEvent.collect { handleUiEvent(it) }
+            practiceErrorsViewModel.posturalErrorsEvent.collect { handleUiEvent(it) }
         }
     }
 

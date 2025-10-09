@@ -660,7 +660,7 @@ class CompletedPracticeFragment : BaseFragment() {
 
         if (isFragmentActive) {
             safeNavigate {
-                /*val musicalalErrorsDetailFragment = MusicalErrorsDetailFragment.newInstance(
+                val musicalalErrorsDetailFragment = MusicalErrorsDetailFragment.newInstance(
                     practiceId = practiceItem.practiceId,
                     videoUrl = practiceItem.localVideoUrl
                 )
@@ -670,7 +670,7 @@ class CompletedPracticeFragment : BaseFragment() {
                     fragment = musicalalErrorsDetailFragment,
                     containerId = R.id.fragment_container,
                     navigationType = NavigationManager.NavigationType.REPLACE_WITH_BACK_STACK
-                )*/
+                )
             }
         }
     }
