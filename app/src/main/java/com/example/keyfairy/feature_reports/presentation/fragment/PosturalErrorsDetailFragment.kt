@@ -24,8 +24,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.keyfairy.databinding.FragmentPosturalErrorsDetailBinding
 import com.example.keyfairy.feature_reports.domain.model.PosturalError
 import com.example.keyfairy.feature_reports.presentation.adapter.PosturalErrorsAdapter
-import com.example.keyfairy.feature_reports.presentation.state.PracticeErrorsState
-import com.example.keyfairy.feature_reports.presentation.state.PracticeErrorsEvent
+import com.example.keyfairy.feature_reports.presentation.state.PosturalErrorsState
+import com.example.keyfairy.feature_reports.presentation.state.PosturalErrorsEvent
 import com.example.keyfairy.feature_reports.presentation.viewmodel.PracticeErrorsViewModel
 import com.example.keyfairy.feature_reports.presentation.viewmodel.PracticeErrorsViewModelFactory
 import com.example.keyfairy.utils.common.BaseFragment
@@ -218,17 +218,17 @@ class PosturalErrorsDetailFragment : BaseFragment() {
     // -------------------------------------------------------------------------
     // MANEJO DE ESTADOS
     // -------------------------------------------------------------------------
-    private fun handleState(state: PracticeErrorsState) {
+    private fun handleState(state: PosturalErrorsState) {
         when (state) {
-            is PracticeErrorsState.Initial,
-            is PracticeErrorsState.Loading -> showLoading()
-            is PracticeErrorsState.Success -> if (state.numErrors > 0) showSuccess(state) else showEmpty()
-            is PracticeErrorsState.Error -> showError(state.message)
+            is PosturalErrorsState.Initial,
+            is PosturalErrorsState.Loading -> showLoading()
+            is PosturalErrorsState.Success -> if (state.numErrors > 0) showSuccess(state) else showEmpty()
+            is PosturalErrorsState.Error -> showError(state.message)
         }
     }
 
-    private fun handleUiEvent(event: PracticeErrorsEvent) {
-        if (event is PracticeErrorsEvent.ShowError) {
+    private fun handleUiEvent(event: PosturalErrorsEvent) {
+        if (event is PosturalErrorsEvent.ShowError) {
             showToast(event.message)
         }
     }
@@ -242,7 +242,7 @@ class PosturalErrorsDetailFragment : BaseFragment() {
         }
     }
 
-    private fun showSuccess(state: PracticeErrorsState.Success) {
+    private fun showSuccess(state: PosturalErrorsState.Success) {
         with(binding) {
             loadingLayout.visibility = View.GONE
             contentLayout.visibility = View.VISIBLE

@@ -1,7 +1,6 @@
 package com.example.keyfairy.feature_reports.presentation.fragment
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -19,8 +18,10 @@ import com.example.keyfairy.databinding.FragmentCompletedPracticeBinding
 import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.feature_reports.presentation.state.DownloadReportEvent
 import com.example.keyfairy.feature_reports.presentation.state.DownloadReportState
-import com.example.keyfairy.feature_reports.presentation.state.PracticeErrorsState
-import com.example.keyfairy.feature_reports.presentation.state.PracticeErrorsEvent
+import com.example.keyfairy.feature_reports.presentation.state.MusicalErrorsEvent
+import com.example.keyfairy.feature_reports.presentation.state.MusicalErrorsState
+import com.example.keyfairy.feature_reports.presentation.state.PosturalErrorsState
+import com.example.keyfairy.feature_reports.presentation.state.PosturalErrorsEvent
 import com.example.keyfairy.feature_reports.presentation.viewmodel.PracticeErrorsViewModel
 import com.example.keyfairy.feature_reports.presentation.viewmodel.PracticeErrorsViewModelFactory
 import com.example.keyfairy.utils.common.BaseFragment
@@ -95,7 +96,6 @@ class CompletedPracticeFragment : BaseFragment() {
         try {
             loadPracticeInfo()
             loadPdfState()
-            loadMusicalErrorsData()
 
             Log.d(TAG, "✅ Data loaded successfully for practice ${practiceItem.practiceId}")
         } catch (e: Exception) {
@@ -105,18 +105,33 @@ class CompletedPracticeFragment : BaseFragment() {
     }
 
     private fun observeViewModel() {
+        // PosturalErrors
         viewLifecycleOwner.lifecycleScope.launch {
-            practiceErrorsViewModel.uiState.collect { state ->
+            practiceErrorsViewModel.posturalErrorsState.collect { state ->
                 handlePosturalErrorsState(state)
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            practiceErrorsViewModel.uiEvent.collect { event ->
+            practiceErrorsViewModel.posturalErrorsEvent.collect { event ->
                 handlePosturalErrorEvent(event)
             }
         }
 
+        // Musical Errors
+        viewLifecycleOwner.lifecycleScope.launch {
+            practiceErrorsViewModel.musicalErrorsState.collect { state ->
+                handleMusicalErrorsState(state)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            practiceErrorsViewModel.musicalErrorsEvent .collect { event ->
+                handleMusicalErrorEvent(event)
+            }
+        }
+
+        // PDF
         viewLifecycleOwner.lifecycleScope.launch {
             practiceErrorsViewModel.downloadState.collect { state ->
                 handleDownloadState(state)
@@ -130,22 +145,22 @@ class CompletedPracticeFragment : BaseFragment() {
         }
     }
 
-    private fun handlePosturalErrorsState(state: PracticeErrorsState) {
+    private fun handlePosturalErrorsState(state: PosturalErrorsState) {
         when (state) {
-            is PracticeErrorsState.Initial -> {
+            is PosturalErrorsState.Initial -> {
                 Log.d(TAG, "Initial state")
             }
-            is PracticeErrorsState.Loading -> {
+            is PosturalErrorsState.Loading -> {
                 Log.d(TAG, "Loading postural errors...")
                 binding.numPosturalErrors.text = "..."
                 binding.btnViewPosturalErrors.isEnabled = false
             }
-            is PracticeErrorsState.Success -> {
+            is PosturalErrorsState.Success -> {
                 Log.d(TAG, "✅ Postural errors loaded: ${state.numErrors}")
                 binding.numPosturalErrors.text = state.numErrors.toString()
                 binding.btnViewPosturalErrors.isEnabled = state.numErrors > 0
             }
-            is PracticeErrorsState.Error -> {
+            is PosturalErrorsState.Error -> {
                 Log.e(TAG, "❌ Error loading postural errors: ${state.message}")
                 binding.numPosturalErrors.text = "0"
                 binding.btnViewPosturalErrors.isEnabled = false
@@ -153,17 +168,50 @@ class CompletedPracticeFragment : BaseFragment() {
         }
     }
 
-    private fun handlePosturalErrorEvent(event: PracticeErrorsEvent) {
+    private fun handlePosturalErrorEvent(event: PosturalErrorsEvent) {
         when (event) {
-            is PracticeErrorsEvent.ShowError -> {
+            is PosturalErrorsEvent.ShowError -> {
                 showError(event.message)
             }
-            is PracticeErrorsEvent.NavigateBack -> {
+            is PosturalErrorsEvent.NavigateBack -> {
                 handleNavigateBack()
             }
         }
     }
 
+    private fun handleMusicalErrorsState(state: MusicalErrorsState) {
+        when (state) {
+            is MusicalErrorsState.Initial -> {
+                Log.d(TAG, "Initial state")
+            }
+            is MusicalErrorsState.Loading -> {
+                Log.d(TAG, "Loading musical errors...")
+                binding.numMusicalErrors.text = "..."
+                binding.btnViewMusicalErrors.isEnabled = false
+            }
+            is MusicalErrorsState.Success -> {
+                Log.d(TAG, "✅ Musical errors loaded: ${state.numErrors}")
+                binding.numMusicalErrors.text = state.numErrors.toString()
+                binding.btnViewMusicalErrors.isEnabled = state.numErrors > 0
+            }
+            is MusicalErrorsState.Error -> {
+                Log.e(TAG, "❌ Error loading musical errors: ${state.message}")
+                binding.numMusicalErrors.text = "0"
+                binding.btnViewMusicalErrors.isEnabled = false
+            }
+        }
+    }
+
+    private fun handleMusicalErrorEvent(event: MusicalErrorsEvent) {
+        when (event) {
+            is MusicalErrorsEvent.ShowError -> {
+                showError(event.message)
+            }
+            is MusicalErrorsEvent.NavigateBack -> {
+                handleNavigateBack()
+            }
+        }
+    }
     private fun handleDownloadState(state: DownloadReportState) {
         when (state) {
             is DownloadReportState.Idle -> {
@@ -296,12 +344,6 @@ class CompletedPracticeFragment : BaseFragment() {
         return File(downloadsDir, fileName)
     }
 
-    private fun loadMusicalErrorsData() {
-        val musicalErrorsCount = generateMockMusicalErrors()
-        binding.numMusicalErrors.text = musicalErrorsCount.toString()
-        Log.d(TAG, "🎵 Musical errors loaded: $musicalErrorsCount")
-    }
-
     private fun setupClickListeners() {
         with(binding) {
             btnDownloadPdf.setOnClickListener {
@@ -374,10 +416,6 @@ class CompletedPracticeFragment : BaseFragment() {
         practiceErrorsViewModel.downloadReport(uid, destinationFile)
     }
 
-    /**
-     * Verifica si el archivo PDF existe sin intentar leerlo directamente.
-     * Esto evita problemas de permisos en Android 10+
-     */
     private fun pdfFileExists(file: File): Boolean {
         return try {
             file.exists() && file.length() >= 1024
@@ -387,10 +425,6 @@ class CompletedPracticeFragment : BaseFragment() {
         }
     }
 
-    /**
-     * Valida un archivo PDF después de la descarga.
-     * Solo usa cuando TIENES control del archivo (después de descargarlo)
-     */
     private fun isValidPdfFile(file: File): Boolean {
         return try {
             if (!file.exists() || file.length() < 1024) {
@@ -570,9 +604,9 @@ class CompletedPracticeFragment : BaseFragment() {
     private fun viewPosturalErrors() {
         Log.d(TAG, "👤 Viewing postural errors for practice ${practiceItem.practiceId}")
 
-        val currentState = practiceErrorsViewModel.uiState.value
+        val currentState = practiceErrorsViewModel.posturalErrorsState.value
 
-        if (currentState !is PracticeErrorsState.Success) {
+        if (currentState !is PosturalErrorsState.Success) {
             showError("Los errores posturales aún se están cargando")
             return
         }
@@ -605,12 +639,40 @@ class CompletedPracticeFragment : BaseFragment() {
     }
 
     private fun viewMusicalErrors() {
-        Log.d(TAG, "🎵 Viewing musical errors for practice ${practiceItem.practiceId}")
-        Toast.makeText(
-            requireContext(),
-            "Ver errores musicales de la práctica #${practiceItem.practiceId}",
-            Toast.LENGTH_SHORT
-        ).show()
+        Log.d(TAG, "👤 Viewing musical errors for practice ${practiceItem.practiceId}")
+
+        val currentState = practiceErrorsViewModel.musicalErrorsState.value
+
+        if (currentState !is MusicalErrorsState.Success) {
+            showError("Los errores musicales aún se están cargando")
+            return
+        }
+
+        if (currentState.numErrors == 0) {
+            showError("No hay errores musicales para mostrar")
+            return
+        }
+
+        if (practiceItem.localVideoUrl.isNullOrEmpty()) {
+            showError("El video de la práctica no está disponible")
+            return
+        }
+
+        if (isFragmentActive) {
+            safeNavigate {
+                /*val musicalalErrorsDetailFragment = MusicalErrorsDetailFragment.newInstance(
+                    practiceId = practiceItem.practiceId,
+                    videoUrl = practiceItem.localVideoUrl
+                )
+
+                NavigationManager.navigateToFragment(
+                    fragmentManager = parentFragmentManager,
+                    fragment = musicalalErrorsDetailFragment,
+                    containerId = R.id.fragment_container,
+                    navigationType = NavigationManager.NavigationType.REPLACE_WITH_BACK_STACK
+                )*/
+            }
+        }
     }
 
     private fun showError(message: String) {
@@ -623,10 +685,6 @@ class CompletedPracticeFragment : BaseFragment() {
         if (isFragmentActive) {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun generateMockMusicalErrors(): Int {
-        return (practiceItem.practiceId % 8) + 2
     }
 
     override fun onResume() {
