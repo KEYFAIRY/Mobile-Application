@@ -28,17 +28,8 @@
                 android:layout_height="wrap_content"
                 android:text="Escala Do Mayor"
                 android:textStyle="bold"
-                android:textSize="14sp"
+                android:textSize="16sp"
                 android:textColor="@color/dark_blue"/>
-
-            <TextView
-                android:id="@+id/video_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="2025-10-2 , 12:00:00"
-                android:textSize="11sp"
-                android:textColor="@color/black"
-                android:layout_marginTop="2dp"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -62,6 +53,33 @@
                     android:textSize="11sp"
                     />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/video_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2025-10-2 , 12:00:00"
+                android:textSize="11sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="2dp"/>
+
+            <TextView
+                android:id="@+id/numPosturalErrors"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Errores posturales: 5"
+                android:textSize="11sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="2dp"/>
+
+            <TextView
+                android:id="@+id/numMusicalErrors"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Errores musicales: 5"
+                android:textSize="11sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="2dp"/>
 
         </LinearLayout>
 

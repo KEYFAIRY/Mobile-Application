@@ -16,6 +16,8 @@ object PracticeMapper {
             bpm = dto.bpm,
             figure = dto.figure,
             octaves = dto.octaves,
+            numPosturalErrors = dto.numPosturalErrors,
+            numMusicalErrors = dto.numMusicalErrors,
             date = dto.date,
             time = dto.time,
             state = dto.state,

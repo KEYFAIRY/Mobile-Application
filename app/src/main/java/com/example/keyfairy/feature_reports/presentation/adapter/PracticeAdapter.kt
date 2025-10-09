@@ -89,11 +89,15 @@ class PracticeAdapter(
         private val videoDate: TextView = itemView.findViewById(R.id.video_date)
         private val practiceInfo: TextView = itemView.findViewById(R.id.practice_info)
         private val actionButton: Button = itemView.findViewById(R.id.action_button)
+        private val numPosturalErrors: TextView = itemView.findViewById(R.id.numPosturalErrors)
+        private val numMusicalErrors: TextView = itemView.findViewById(R.id.numMusicalErrors)
 
         fun bind(practice: Practice) {
             scaleName.text = practice.getScaleFullName()
             videoDate.text = practice.getFormattedDateTime()
             practiceInfo.text = practice.getPracticeInfo()
+            numPosturalErrors.text = "Errores posturales: ${practice.numPosturalErrors}"
+            numMusicalErrors.text = "Errores musicales: ${practice.numMusicalErrors}"
 
             actionButton.setOnClickListener {
                 onPracticeClick(practice)

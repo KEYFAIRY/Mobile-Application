@@ -12,6 +12,8 @@ data class Practice(
     val bpm: Int,
     val figure: String,
     val octaves: Int,
+    val numPosturalErrors: Int,
+    val numMusicalErrors: Int,
     val date: String,
     val time: String,
     val state: String,

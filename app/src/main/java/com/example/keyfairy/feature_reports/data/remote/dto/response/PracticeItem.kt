@@ -24,6 +24,12 @@ data class PracticeItem(
     @SerializedName("octaves")
     val octaves: Int,
 
+    @SerializedName("num_postural_errors")
+    val numPosturalErrors: Int,
+
+    @SerializedName("num_musical_errors")
+    val numMusicalErrors: Int,
+
     @SerializedName("date")
     val date: String,
 
