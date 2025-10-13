@@ -69,7 +69,7 @@ class PracticeReportActivity : AppCompatActivity() {
 
         // Actualizar título
         val titleTextView = findViewById<TextView>(R.id.textView_title)
-        titleTextView.text = practiceItem.getScaleFullName()
+        titleTextView.text = practiceItem.scale
     }
 
     private fun loadFragmentBasedOnState() {

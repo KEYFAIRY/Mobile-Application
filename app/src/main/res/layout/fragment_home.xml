@@ -80,7 +80,7 @@
                         android:id="@+id/datetime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="12 de mayo 5 pm"
+                        android:text="Cargando..."
                         android:textColor="@android:color/white"/>
                 </LinearLayout>
                 <LinearLayout
@@ -98,7 +98,7 @@
                         android:id="@+id/scaleInfo"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Escala Do Mayor"
+                        android:text="Cargando..."
                         android:textColor="@android:color/white"/>
                 </LinearLayout>
                 <LinearLayout
@@ -116,7 +116,7 @@
                         android:id="@+id/numPosturalErrors"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="60% postura correcta"
+                        android:text="Cargando..."
                         android:textColor="@android:color/white"/>
                 </LinearLayout>
                 <LinearLayout
@@ -135,7 +135,7 @@
                         android:id="@+id/numMusicalErrors"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="30% correcta ejecución musical"
+                        android:text="Cargando..."
                         android:textColor="@android:color/white"/>
                 </LinearLayout>
 

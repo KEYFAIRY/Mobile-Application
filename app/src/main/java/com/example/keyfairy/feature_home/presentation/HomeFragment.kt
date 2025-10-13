@@ -27,6 +27,7 @@ import com.example.keyfairy.feature_home.presentation.state.LastPracticeEvent
 import com.example.keyfairy.feature_home.presentation.state.LastPracticeState
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModel
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModelFactory
+import com.example.keyfairy.feature_reports.domain.model.Practice
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.storage.AuthenticationManager
 import com.example.keyfairy.utils.worker.toPendingVideo
@@ -89,6 +90,9 @@ class HomeFragment : BaseFragment() {
         setupClickListeners()
         setupViewModel()
         setupObservers()
+
+        // Cargar la última práctica
+        viewModel.loadPractice()
     }
 
     private fun requestAllPermissions() {
@@ -503,10 +507,6 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupViewModel() {
-        binding.datetime.text = "fecha"
-        binding.scaleInfo.text = "escala"
-        binding.numPosturalErrors.text = "0"
-        binding.numMusicalErrors.text = "0"
         val factory = LastPracticeViewModelFactory()
         viewModel = ViewModelProvider(this, factory)[LastPracticeViewModel::class.java]
     }
@@ -536,26 +536,73 @@ class HomeFragment : BaseFragment() {
 
         when (state) {
             is LastPracticeState.Initial -> {
+                // Mostrar estado inicial (puedes ocultar la card o mostrar placeholder)
+                binding.lastScaleCard.visibility = View.GONE
             }
 
             is LastPracticeState.Loading -> {
+                // Mostrar loading (opcional)
+                binding.lastScaleCard.visibility = View.VISIBLE
+                showLoadingState()
             }
 
             is LastPracticeState.Success -> {
+                // Cargar los datos en la UI
+                binding.lastScaleCard.visibility = View.VISIBLE
+                loadPracticeData(state.practice)
             }
 
             is LastPracticeState.Error -> {
+                // Mostrar estado de error
+                binding.lastScaleCard.visibility = View.VISIBLE
+                showErrorState(state.message)
             }
         }
     }
 
-    private fun handleUiEvent(state: LastPracticeEvent) {
+    private fun showLoadingState() {
+        binding.datetime.text = "Cargando..."
+        binding.scaleInfo.text = "Cargando..."
+        binding.numPosturalErrors.text = "..."
+        binding.numMusicalErrors.text = "..."
+    }
 
+    private fun showErrorState(message: String) {
+        binding.datetime.text = "No disponible"
+        binding.scaleInfo.text = message
+        binding.numPosturalErrors.text = "N/A"
+        binding.numMusicalErrors.text = "N/A"
+    }
+
+    private fun loadPracticeData(practice: Practice) {
+        // Cargar fecha y hora
+        binding.datetime.text = practice.getFormattedDateTime()
+
+        // Cargar información de la escala
+        binding.scaleInfo.text = practice.getScaleFullName() + "\n" + practice.getPracticeInfo()
+
+        binding.numPosturalErrors.text = "${practice.numPosturalErrors} errores posturales."
+
+        binding.numMusicalErrors.text = "${practice.numMusicalErrors} errores musicales."
+
+        Log.d(TAG, "Practice data loaded: ${practice.getScaleFullName()} - ${practice.getFormattedDateTime()}")
+    }
+
+    private fun handleUiEvent(event: LastPracticeEvent) {
+        when (event) {
+            is LastPracticeEvent.ShowError -> {
+                if (isFragmentActive) {
+                    Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         Log.d("HomeFragment", "🏠 HomeFragment resumed")
+        // Recargar práctica al volver al fragment
+        viewModel.loadPractice()
     }
 
     override fun onDestroyView() {
