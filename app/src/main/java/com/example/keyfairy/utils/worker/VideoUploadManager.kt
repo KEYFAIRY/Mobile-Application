@@ -31,6 +31,7 @@ class VideoUploadManager(private val context: Context) {
         private const val TAG_BPM_PREFIX = "bpm:"
         private const val TAG_FIGURE_PREFIX = "figure:"
         private const val TAG_OCTAVES_PREFIX = "octaves:"
+        private const val TAG_NUM_NOTES_PREFIX = "notes:"
         private const val TAG_DURATION_PREFIX = "duration:"
         private const val TAG_TIMESTAMP_PREFIX = "timestamp:"
     }
@@ -56,7 +57,7 @@ class VideoUploadManager(private val context: Context) {
                     entry.put("uri", v.videoUri)
                     entry.put("ts", v.timestamp)
                     entry.put("practice", JSONObject(v.practiceJson))
-                    entry.put("uid", v.uid) // ✅ NUEVO
+                    entry.put("uid", v.uid)
                     root.put(k.toString(), entry)
                 }
             }
@@ -80,7 +81,7 @@ class VideoUploadManager(private val context: Context) {
                     val uri = entry.optString("uri", "")
                     val ts = entry.optLong("ts", System.currentTimeMillis())
                     val practiceJson = entry.optJSONObject("practice")?.toString() ?: "{}"
-                    val uid = entry.optString("uid", "anonymous") // ✅ NUEVO
+                    val uid = entry.optString("uid", "anonymous")
                     videoFilesMap[uuid] = TrackedEntry(path, uri, ts, practiceJson, uid)
                 } catch (e: Exception) {
                     Log.w("VideoUploadManager", "⚠️ Skipping invalid tracked entry: $key")
@@ -114,6 +115,7 @@ class VideoUploadManager(private val context: Context) {
             VideoUploadWorker.KEY_BPM to practice.bpm,
             VideoUploadWorker.KEY_FIGURE to practice.figure,
             VideoUploadWorker.KEY_OCTAVES to practice.octaves,
+            VideoUploadWorker.KEY_NUM_NOTES to practice.total_notes_played,
             VideoUploadWorker.KEY_VIDEO_LOCAL_ROUTE to practice.videoLocalRoute,
             VideoUploadWorker.KEY_TIMESTAMP to currentTimestamp,
         )
@@ -137,6 +139,7 @@ class VideoUploadManager(private val context: Context) {
             .addTag("$TAG_BPM_PREFIX${practice.bpm}")
             .addTag("$TAG_FIGURE_PREFIX${practice.figure}")
             .addTag("$TAG_OCTAVES_PREFIX${practice.octaves}")
+            .addTag("$TAG_NUM_NOTES_PREFIX${practice.total_notes_played}")
             .addTag("$TAG_DURATION_PREFIX${practice.duration}")
             .addTag("$TAG_TIMESTAMP_PREFIX$currentTimestamp")
             // Backoff: reintentar cada 15 segundos
@@ -158,6 +161,7 @@ class VideoUploadManager(private val context: Context) {
             put("bpm", practice.bpm)
             put("figure", practice.figure)
             put("octaves", practice.octaves)
+            put("total_notes_played", practice.total_notes_played)
             put("videoLocalRoute", practice.videoLocalRoute)
         }.toString()
 
@@ -212,7 +216,7 @@ class VideoUploadManager(private val context: Context) {
         val videoUri: String,
         val timestamp: Long,
         val practiceJson: String,
-        val uid: String // ✅ NUEVO
+        val uid: String
     )
 
     fun observeCurrentUserPendingUploads(): LiveData<List<WorkInfo>> {
@@ -285,8 +289,6 @@ class VideoUploadManager(private val context: Context) {
 
     fun onUserChanged(newUid: String) {
         Log.d("VideoUploadManager", "👤 User changed to: $newUid")
-        // Los trabajos de otros usuarios seguirán ejecutándose en background
-        // pero la UI solo mostrará los del usuario actual
     }
 
     private fun removeTracked(workId: UUID) {

@@ -9,6 +9,7 @@ data class PracticeRequest(
     val bpm: Int,
     val figure: Double,
     val octaves: Int,
+    val total_notes_played: Int,
     val uid: String,
     val video_local_route: String,
 )

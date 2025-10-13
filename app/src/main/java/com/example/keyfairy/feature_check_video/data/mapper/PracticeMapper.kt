@@ -16,6 +16,7 @@ object PracticeMapper {
             bpm = practice.bpm,
             figure = practice.figure,
             octaves = practice.octaves,
+            total_notes_played = practice.total_notes_played,
             uid = practice.uid,
             video_local_route = practice.videoLocalRoute,
         )

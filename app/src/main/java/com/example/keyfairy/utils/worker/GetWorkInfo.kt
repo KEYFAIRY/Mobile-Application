@@ -9,7 +9,6 @@ fun WorkInfo.toPendingVideo(): PendingVideo {
     return try {
         Log.d("WorkInfoExtensions", "🔍 Converting WorkInfo ID: $id, state=$state")
 
-        // Prioridad: progress -> outputData -> tags
         val currentAttempt = progress.getInt("current_attempt", 0)
             .takeIf { it > 0 }
             ?: outputData.getInt("current_attempt", 0)

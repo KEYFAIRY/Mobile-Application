@@ -11,5 +11,6 @@ data class Practice(
     val bpm: Int,
     val figure: Double,
     val octaves: Int,
+    val total_notes_played: Int,
     val videoLocalRoute: String,
 )

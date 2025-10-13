@@ -44,6 +44,7 @@ class PracticeFragment : BaseFragment() {
         recyclerView = view.findViewById(R.id.recycler_view_escalas)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
+
         escalasAdapter = ScaleAdapter(emptyList()) { escalaSeleccionada ->
             safeNavigate {
                 val fragment = SpeedAndDistanceFragment().apply {

@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.work.WorkInfo
+import com.chaquo.python.Python
 import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentCheckVideoBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
@@ -249,17 +250,23 @@ class CheckVideoFragment : BaseFragment() {
             val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
+            val nota = (escalaName!!).split(" ").firstOrNull()?.trim() ?: "Do"
+            val scaleType = ScaleType.fromName(escalaName!!).displayName
+
+            val notesPlayed = getNumNotes(nota, scaleType, octaves ?: 0)
+
             val practice = Practice(
                 uid = uid,
                 practiceId = 0,
                 date = currentDate,
                 time = currentTime,
                 scale = escalaName!!,
-                scaleType = ScaleType.fromName(escalaName!!).displayName,
+                scaleType = scaleType,
                 duration = videoDurationSeconds,
                 bpm = bpm ?: 0,
                 figure = figure ?: 0.0,
                 octaves = octaves ?: 0,
+                total_notes_played = notesPlayed,
                 videoLocalRoute = videoFile.absolutePath
             )
 
@@ -267,6 +274,10 @@ class CheckVideoFragment : BaseFragment() {
             Log.d("CheckVideo", "📁 Original path: ${videoFile.absolutePath}")
             Log.d("CheckVideo", "📁 File size: ${videoFile.length() / 1024}KB")
             Log.d("CheckVideo", "📁 File exists: ${videoFile.exists()}")
+            Log.d("CheckVideo", " Escala: $nota")
+            Log.d("CheckVideo", "📄 Tipo de escala: $scaleType")
+            Log.d("CheckVideo", "📄 Cantidad de notas: ${notesPlayed}")
+
 
             workId = videoUploadManager.scheduleVideoUpload(
                 practice = practice,
@@ -291,6 +302,18 @@ class CheckVideoFragment : BaseFragment() {
         } catch (e: Exception) {
             Log.e("CheckVideo", "❌ Error scheduling upload: ${e.message}", e)
             showError("Error al programar la subida: ${e.message}")
+        }
+    }
+
+    private fun getNumNotes(nota: String, scaleType: String, octaves: Int): Int {
+        return try {
+            val py = Python.getInstance()
+            val pyModule = py.getModule("music_utils")
+            val resultado = pyModule.callAttr("get_num_notes", nota, scaleType, octaves)
+            resultado.toInt()
+        } catch (e: Exception) {
+            Log.e("ScaleFragment", "Error calculando numNotes: ${e.message}")
+            1 // Valor por defecto en caso de error
         }
     }
 

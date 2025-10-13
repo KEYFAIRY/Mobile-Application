@@ -14,11 +14,6 @@ import com.example.keyfairy.feature_check_video.domain.use_case.RegisterPractice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.ConnectException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
-import java.io.IOException
-import javax.net.ssl.SSLException
 
 class VideoUploadWorker(
     private val ctx: Context,
@@ -38,6 +33,7 @@ class VideoUploadWorker(
         const val KEY_BPM = "bpm"
         const val KEY_FIGURE = "figure"
         const val KEY_OCTAVES = "octaves"
+        const val KEY_NUM_NOTES = "total_notes_played"
         const val KEY_VIDEO_LOCAL_ROUTE = "video_local_route"
         const val KEY_TIMESTAMP = "timestamp"
 
@@ -117,6 +113,7 @@ class VideoUploadWorker(
             val bpm = inputData.getInt(KEY_BPM, 120)
             val figure = inputData.getDouble(KEY_FIGURE, 1.0)
             val octaves = inputData.getInt(KEY_OCTAVES, 1)
+            val totalNotesPlayed = inputData.getInt(KEY_NUM_NOTES, 0)
             val videoLocalRoute = inputData.getString(KEY_VIDEO_LOCAL_ROUTE) ?: videoPath
             val timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
 
@@ -146,6 +143,7 @@ class VideoUploadWorker(
                 bpm = bpm,
                 figure = figure,
                 octaves = octaves,
+                total_notes_played = totalNotesPlayed,
                 videoLocalRoute = videoLocalRoute
             )
 
@@ -171,6 +169,7 @@ class VideoUploadWorker(
                     "bpm" to bpm,
                     "figure" to figure,
                     "octaves" to octaves,
+
                     "duration" to duration,
                     "attempts" to attemptNumber,
                     "timestamp" to timestamp,
@@ -258,6 +257,7 @@ class VideoUploadWorker(
                 KEY_BPM to inputData.getInt(KEY_BPM, 0),
                 KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
                 KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+                KEY_NUM_NOTES to inputData.getInt(KEY_NUM_NOTES, 0),
                 KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
                 KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
             )
@@ -340,6 +340,7 @@ class VideoUploadWorker(
                     KEY_BPM to inputData.getInt(KEY_BPM, 0),
                     KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
                     KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+                    KEY_NUM_NOTES to inputData.getInt(KEY_NUM_NOTES, 0),
                     KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
                     KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
                 )
@@ -371,6 +372,7 @@ class VideoUploadWorker(
             KEY_BPM to inputData.getInt(KEY_BPM, 0),
             KEY_FIGURE to inputData.getDouble(KEY_FIGURE, 0.0),
             KEY_OCTAVES to inputData.getInt(KEY_OCTAVES, 0),
+            KEY_NUM_NOTES to inputData.getInt(KEY_NUM_NOTES, 0),
             KEY_DURATION to inputData.getInt(KEY_DURATION, 0),
             KEY_VIDEO_PATH to (inputData.getString(KEY_VIDEO_PATH) ?: ""),
             KEY_VIDEO_URI to (inputData.getString(KEY_VIDEO_URI) ?: ""),
@@ -384,14 +386,14 @@ class VideoUploadWorker(
         val inputKeys = listOf(
             KEY_VIDEO_URI, KEY_VIDEO_PATH, KEY_UID, KEY_PRACTICE_ID,
             KEY_DATE, KEY_TIME, KEY_SCALE, KEY_SCALE_TYPE,
-            KEY_DURATION, KEY_BPM, KEY_FIGURE, KEY_OCTAVES,
+            KEY_DURATION, KEY_BPM, KEY_FIGURE, KEY_OCTAVES, KEY_NUM_NOTES,
             KEY_VIDEO_LOCAL_ROUTE, KEY_TIMESTAMP
         )
 
         inputKeys.forEach { key ->
             if (!this.keyValueMap.containsKey(key)) {
                 when (key) {
-                    KEY_BPM, KEY_PRACTICE_ID, KEY_DURATION, KEY_OCTAVES -> {
+                    KEY_BPM, KEY_PRACTICE_ID, KEY_DURATION, KEY_OCTAVES, KEY_NUM_NOTES -> {
                         entries.add(key to inputData.getInt(key, 0))
                     }
                     KEY_FIGURE -> {
