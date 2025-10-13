@@ -15,22 +15,30 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.keyfairy.databinding.FragmentHomeBinding
 import com.example.keyfairy.feature_home.domain.model.PendingVideo
 import com.example.keyfairy.feature_home.presentation.adapter.PendingVideosAdapter
+import com.example.keyfairy.feature_home.presentation.state.LastPracticeEvent
+import com.example.keyfairy.feature_home.presentation.state.LastPracticeState
+import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModel
+import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModelFactory
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.storage.AuthenticationManager
 import com.example.keyfairy.utils.worker.toPendingVideo
 import com.example.keyfairy.utils.workers.VideoUploadManager
 import com.example.keyfairy.utils.workers.VideoUploadWorker
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
 
 class HomeFragment : BaseFragment() {
 
+    private var TAG = "HomeFragment"
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
@@ -41,6 +49,8 @@ class HomeFragment : BaseFragment() {
     private val cleanedWorks = mutableSetOf<UUID>()
     private val cancellingWorks = mutableSetOf<UUID>()
 
+    private lateinit var viewModel: LastPracticeViewModel
+
     // Launcher para solicitar múltiples permisos - SOLO ACCESO COMPLETO
     private val multiplePermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -48,14 +58,14 @@ class HomeFragment : BaseFragment() {
         val deniedPermissions = permissions.filter { !it.value }.keys
 
         if (deniedPermissions.isEmpty()) {
-            Log.d("HomeFragment", "✅ All permissions granted")
+            Log.d(TAG, "✅ All permissions granted")
             Toast.makeText(
                 requireContext(),
                 "Todos los permisos concedidos",
                 Toast.LENGTH_SHORT
             ).show()
         } else {
-            Log.w("HomeFragment", "⚠️ Some permissions denied: $deniedPermissions")
+            Log.w(TAG, "⚠️ Some permissions denied: $deniedPermissions")
             handlePermissionsDenied(deniedPermissions)
         }
     }
@@ -77,6 +87,8 @@ class HomeFragment : BaseFragment() {
         setupPendingVideosRecyclerView()
         observePendingVideos()
         setupClickListeners()
+        setupViewModel()
+        setupObservers()
     }
 
     private fun requestAllPermissions() {
@@ -144,7 +156,7 @@ class HomeFragment : BaseFragment() {
 
         // Solicitar permisos si hay alguno pendiente
         if (permissionsToRequest.isNotEmpty()) {
-            Log.d("HomeFragment", "📋 Requesting permissions: $permissionsToRequest")
+            Log.d(TAG, "📋 Requesting permissions: $permissionsToRequest")
 
             // Mostrar explicación antes de solicitar permisos críticos
             if (permissionsToRequest.any { it in listOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_EXTERNAL_STORAGE) }) {
@@ -153,7 +165,7 @@ class HomeFragment : BaseFragment() {
                 multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
             }
         } else {
-            Log.d("HomeFragment", "✅ All permissions already granted")
+            Log.d(TAG, "✅ All permissions already granted")
         }
     }
 
@@ -247,7 +259,7 @@ class HomeFragment : BaseFragment() {
             }
             startActivity(intent)
         } catch (e: Exception) {
-            Log.e("HomeFragment", "Error opening app settings: ${e.message}", e)
+            Log.e(TAG, "Error opening app settings: ${e.message}", e)
             Toast.makeText(requireContext(), "No se pudo abrir la configuración", Toast.LENGTH_SHORT).show()
         }
     }
@@ -279,7 +291,7 @@ class HomeFragment : BaseFragment() {
 
     private fun cancelUpload(pendingVideo: PendingVideo) {
         try {
-            Log.d("HomeFragment", "🚫 Cancelling upload: ${pendingVideo.scaleName} (${pendingVideo.workId})")
+            Log.d(TAG, "🚫 Cancelling upload: ${pendingVideo.scaleName} (${pendingVideo.workId})")
             cancellingWorks.add(pendingVideo.workId)
 
             if (pendingVideo.status == WorkInfo.State.FAILED) {
@@ -301,9 +313,9 @@ class HomeFragment : BaseFragment() {
             videoUploadManager.cancelWork(pendingVideo.workId)
 
             Toast.makeText(requireContext(), "Cancelando: ${pendingVideo.scaleName}...", Toast.LENGTH_SHORT).show()
-            Log.d("HomeFragment", "✅ Cancel request sent: ${pendingVideo.scaleName}")
+            Log.d(TAG, "✅ Cancel request sent: ${pendingVideo.scaleName}")
         } catch (e: Exception) {
-            Log.e("HomeFragment", "❌ Error cancelling: ${e.message}", e)
+            Log.e(TAG, "❌ Error cancelling: ${e.message}", e)
             cancellingWorks.remove(pendingVideo.workId)
             Toast.makeText(requireContext(), "Error al cancelar: ${e.message}", Toast.LENGTH_LONG).show()
         }
@@ -317,7 +329,7 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun processWorkInfoList(workInfoList: List<WorkInfo>) {
-        Log.d("HomeFragment", "📊 Processing ${workInfoList.size} work items")
+        Log.d("", "📊 Processing ${workInfoList.size} work items")
 
         workInfoList.forEach { workInfo ->
             val potentialPath = workInfo.progress.getString(VideoUploadWorker.KEY_VIDEO_PATH)
@@ -473,7 +485,6 @@ class HomeFragment : BaseFragment() {
 
     private fun setupClickListeners() {
         binding.pendingVideosCard.setOnLongClickListener {
-            // ✅ CAMBIO: Usar métodos específicos del usuario actual
             val trackedCount = videoUploadManager.getTrackedFilesCount()
             val pendingCount = videoUploadManager.getCurrentUserPendingUploadsCount()
             val hasBlocked = videoUploadManager.currentUserHasNetworkConstrainedWork()
@@ -489,6 +500,57 @@ class HomeFragment : BaseFragment() {
             Log.d("HomeFragment", "🧹 Manual cleanup - cleared tracking sets")
             true
         }
+    }
+
+    private fun setupViewModel() {
+        binding.datetime.text = "fecha"
+        binding.scaleInfo.text = "escala"
+        binding.numPosturalErrors.text = "0"
+        binding.numMusicalErrors.text = "0"
+        val factory = LastPracticeViewModelFactory()
+        viewModel = ViewModelProvider(this, factory)[LastPracticeViewModel::class.java]
+    }
+
+    private fun setupObservers() {
+        // Observar estado de UI
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                if (isFragmentActive) {
+                    handleUiState(state)
+                }
+            }
+        }
+
+        // Observar eventos de UI
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.uiEvent.collect { event ->
+                if (isFragmentActive) {
+                    handleUiEvent(event)
+                }
+            }
+        }
+    }
+
+    private fun handleUiState(state: LastPracticeState) {
+        Log.d(TAG, "UI State: $state")
+
+        when (state) {
+            is LastPracticeState.Initial -> {
+            }
+
+            is LastPracticeState.Loading -> {
+            }
+
+            is LastPracticeState.Success -> {
+            }
+
+            is LastPracticeState.Error -> {
+            }
+        }
+    }
+
+    private fun handleUiEvent(state: LastPracticeEvent) {
+
     }
 
     override fun onResume() {

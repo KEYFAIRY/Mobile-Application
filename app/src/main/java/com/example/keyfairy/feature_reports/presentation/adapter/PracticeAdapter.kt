@@ -93,7 +93,7 @@ class PracticeAdapter(
         private val numMusicalErrors: TextView = itemView.findViewById(R.id.numMusicalErrors)
 
         fun bind(practice: Practice) {
-            scaleName.text = practice.getScaleFullName()
+            scaleName.text = practice.scale
             videoDate.text = practice.getFormattedDateTime()
             practiceInfo.text = practice.getPracticeInfo()
             numPosturalErrors.text = "Errores posturales: ${practice.numPosturalErrors}"
