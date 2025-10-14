@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5"
-    tools:context=".feature_progress.presentation.ProgressFragment">
+    tools:context=".feature_progress.presentation.fragment.ProgressFragment">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -78,6 +78,7 @@
                 android:textStyle="bold" />
 
             <ImageView
+                android:id="@+id/topEscalasImage"
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:layout_marginTop="8dp"
@@ -95,6 +96,7 @@
                 android:textStyle="bold" />
 
             <ImageView
+                android:id="@+id/posturasImage"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"
@@ -112,6 +114,7 @@
                 android:textStyle="bold" />
 
             <ImageView
+                android:id="@+id/notasImage"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"
@@ -121,6 +124,7 @@
                 tools:src="@tools:sample/backgrounds/scenic" />
 
             <TextView
+                android:id="@+id/posturalScaleText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -128,33 +132,95 @@
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <ImageView
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="8dp"
-                android:background="#E0E0E0"
-                android:contentDescription="Gráfico de línea de progreso en errores posturales"
-                android:scaleType="centerInside"
-                tools:src="@tools:sample/backgrounds/scenic" />
+                android:layout_height="wrap_content">
 
+                <ImageButton
+                    android:id="@+id/previousPosturalScaleButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/arrow_blue2"
+                    android:contentDescription="Escala anterior"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <ImageView
+                    android:id="@+id/erroresPosturalesImage"
+                    android:layout_width="0dp"
+                    android:layout_height="200dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#E0E0E0"
+                    android:scaleType="centerInside"
+                    app:layout_constraintStart_toEndOf="@id/previousPosturalScaleButton"
+                    app:layout_constraintEnd_toStartOf="@id/nextPosturalScaleButton"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <ImageButton
+                    android:id="@+id/nextPosturalScaleButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/arrow_blue"
+                    android:contentDescription="Escala siguiente"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
             <TextView
+                android:id="@+id/musicalScaleText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Progreso en errores musicales: Re mayor"
+                android:text="Progreso en errores posturales: Re mayor"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <ImageView
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="8dp"
-                android:background="#E0E0E0"
-                android:contentDescription="Gráfico de línea de progreso en errores musicales"
-                android:scaleType="centerInside"
-                tools:src="@tools:sample/backgrounds/scenic" />
+                android:layout_height="wrap_content">
 
+                <ImageButton
+                    android:id="@+id/previousMusicalScaleButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/arrow_blue2"
+                    android:contentDescription="Escala anterior"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
+                <ImageView
+                    android:id="@+id/erroresMusicalesImage"
+                    android:layout_width="0dp"
+                    android:layout_height="200dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#E0E0E0"
+                    android:scaleType="centerInside"
+                    app:layout_constraintStart_toEndOf="@id/previousMusicalScaleButton"
+                    app:layout_constraintEnd_toStartOf="@id/nextMusicalScaleButton"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <ImageButton
+                    android:id="@+id/nextMusicalScaleButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/arrow_blue"
+                    android:contentDescription="Escala siguiente"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <Button
                 android:id="@+id/reportsButton"

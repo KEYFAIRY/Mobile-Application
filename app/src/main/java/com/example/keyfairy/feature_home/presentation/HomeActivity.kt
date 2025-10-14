@@ -16,7 +16,7 @@ import com.example.keyfairy.R
 import com.example.keyfairy.databinding.ActivityHomeBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
 import com.example.keyfairy.feature_check_video.presentation.fragment.CheckVideoFragment
-import com.example.keyfairy.feature_progress.presentation.ProgressFragment
+import com.example.keyfairy.feature_progress.presentation.fragment.ProgressFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.feature_practice_execution.presentation.PracticeExecutionFragment
 import com.example.keyfairy.feature_profile.presentation.fragments.ProfileFragment
