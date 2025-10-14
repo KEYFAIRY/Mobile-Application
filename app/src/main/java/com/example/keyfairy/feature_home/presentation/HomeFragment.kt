@@ -29,7 +29,6 @@ import com.example.keyfairy.feature_home.presentation.state.LastPracticeState
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModel
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModelFactory
 import com.example.keyfairy.feature_reports.domain.model.Practice
-import com.example.keyfairy.feature_reports.presentation.PracticeReportActivity
 import com.example.keyfairy.feature_reports.presentation.fragment.ReportsFragment
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.NavigationManager
@@ -550,6 +549,13 @@ class HomeFragment : BaseFragment() {
                 loadPracticeData(state.practice)
             }
 
+            is LastPracticeState.NoPractices -> {
+                // Mostrar estado de sin prácticas
+                binding.lastScaleCard.visibility = View.VISIBLE
+                binding.lastPracticeTitle.text = "No hay prácticas registradas"
+                showErrorState(state.message)
+            }
+
             is LastPracticeState.Error -> {
                 // Mostrar estado de error
                 binding.lastScaleCard.visibility = View.VISIBLE
@@ -590,6 +596,12 @@ class HomeFragment : BaseFragment() {
     private fun handleUiEvent(event: LastPracticeEvent) {
         when (event) {
             is LastPracticeEvent.ShowError -> {
+                if (isFragmentActive) {
+                    Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            is LastPracticeEvent.NoPractices -> {
                 if (isFragmentActive) {
                     Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
                 }

@@ -33,13 +33,13 @@ class MusicalErrorsAdapter (
         fun bind(error: MusicalError, position: Int) {
             with(binding) {
                 // Nota tocada
-                notePlayed.text = error.note_played
+                notePlayed.text = "Nota tocada: " + error.note_played
 
                 // Nota correcta
-                noteCorrect.text = error.note_correct
+                noteCorrect.text = "Nota correcta: " + error.note_correct
 
                 // Momento del error
-                moment.text = "${error.min_sec}"
+                moment.text = "Momento: ${error.min_sec}"
 
 
                 // Click listener para ir al momento del error en el video

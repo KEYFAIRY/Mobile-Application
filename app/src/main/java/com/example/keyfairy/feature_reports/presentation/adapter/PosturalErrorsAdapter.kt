@@ -36,11 +36,11 @@ class PosturalErrorsAdapter(
                 explication.text = error.explication
 
                 // Momento del error
-                moment.text = "${error.minSecInit} a ${error.minSecEnd}"
+                moment.text = "Ocurrido de ${error.minSecInit} a ${error.minSecEnd}"
 
                 // Calcular duración
                 val duration_calc = calculateDuration(error.minSecInit, error.minSecEnd)
-                duration.text = "$duration_calc segundos"
+                duration.text = "Duración: $duration_calc segundos"
 
                 // Click listener para ir al momento del error en el video
                 actionButton.setOnClickListener {

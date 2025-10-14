@@ -8,4 +8,5 @@ sealed class LastPracticeState {
     object Loading : LastPracticeState()
     data class Success(val practice: Practice) : LastPracticeState()
     data class Error(val message: String) : LastPracticeState()
+    data class NoPractices(val message: String) : LastPracticeState()
 }

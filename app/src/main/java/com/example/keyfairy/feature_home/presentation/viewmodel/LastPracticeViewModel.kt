@@ -58,13 +58,16 @@ class LastPracticeViewModel(
 
         result.fold(
             onSuccess = { practice ->
-                val lastPractice = practice
-
-                Log.d(TAG, "Loaded practice.")
-
-                _uiState.value = LastPracticeState.Success(
-                    practice = lastPractice !!
-                )
+                if (practice != null) {
+                    Log.d(TAG, "Loaded practice.")
+                    _uiState.value = LastPracticeState.Success(
+                        practice = practice
+                    )
+                } else {
+                    Log.d(TAG, "No practice found for user")
+                    _uiState.value = LastPracticeState.NoPractices("No se encontraron prácticas")
+                    _uiEvent.send(LastPracticeEvent.NoPractices("No hay ninguna práctica registrada"))
+                }
             },
             onFailure = { exception ->
                 Log.e(TAG, "Error loading practices: ${exception.message}", exception)
