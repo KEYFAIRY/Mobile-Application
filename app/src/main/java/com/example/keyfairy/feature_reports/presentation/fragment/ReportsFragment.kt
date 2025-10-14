@@ -135,7 +135,7 @@ class ReportsFragment : BaseFragment() {
 
         when (state) {
             is ReportsState.Initial -> {
-                showLoading(false)
+                showLoading(true)
                 showContent(false)
                 showEmpty(false)
                 showError(false)
@@ -193,14 +193,9 @@ class ReportsFragment : BaseFragment() {
                 }
             }
 
-            is ReportsEvent.NavigateToDetails -> {
+            is ReportsEvent.GettingDetails -> {
                 if (isFragmentActive) {
                     Log.d(TAG, "Navigate to practice details: ${event.practiceId}")
-                    Toast.makeText(
-                        requireContext(),
-                        "Ver detalles de práctica #${event.practiceId}",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
             }
 

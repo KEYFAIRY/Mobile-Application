@@ -586,9 +586,24 @@ class HomeFragment : BaseFragment() {
         // Cargar información de la escala
         binding.scaleInfo.text = practice.scale + "\n" + practice.getPracticeInfo()
 
-        binding.numPosturalErrors.text = "${practice.numPosturalErrors} errores posturales."
+        var posturalSufix: String
+        var musicalSufix: String
 
-        binding.numMusicalErrors.text = "${practice.numMusicalErrors} errores musicales."
+        posturalSufix = if(practice.numPosturalErrors == 1) {
+            "error postural"
+        } else {
+            "errores posturales"
+        }
+
+        musicalSufix = if(practice.numMusicalErrors == 1) {
+            "error musical"
+        } else {
+            "errores musicales"
+        }
+
+        binding.numPosturalErrors.text = "${practice.numPosturalErrors} ${posturalSufix}."
+
+        binding.numMusicalErrors.text = "${practice.numMusicalErrors} ${musicalSufix}."
 
         Log.d(TAG, "Practice data loaded: ${practice.scale} - ${practice.getFormattedDateTime()}")
     }

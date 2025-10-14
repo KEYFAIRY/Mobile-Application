@@ -128,6 +128,7 @@ class ReportsViewModel(
 
             Log.d(TAG, "Fetching updated practice $practiceId before navigation")
 
+            _uiEvent.send(ReportsEvent.GettingDetails(practiceId))
             val result = getPracticeByIdUseCase.execute(uid, practiceId)
 
             result.fold(
@@ -142,12 +143,6 @@ class ReportsViewModel(
                     ))
                 }
             )
-        }
-    }
-
-    fun onPracticeClicked(practiceId: Int) {
-        viewModelScope.launch {
-            _uiEvent.send(ReportsEvent.NavigateToDetails(practiceId))
         }
     }
 
