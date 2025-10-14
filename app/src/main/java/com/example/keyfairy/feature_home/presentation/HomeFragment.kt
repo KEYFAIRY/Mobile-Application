@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.example.keyfairy.R
 import com.example.keyfairy.databinding.FragmentHomeBinding
 import com.example.keyfairy.feature_home.domain.model.PendingVideo
 import com.example.keyfairy.feature_home.presentation.adapter.PendingVideosAdapter
@@ -28,7 +29,10 @@ import com.example.keyfairy.feature_home.presentation.state.LastPracticeState
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModel
 import com.example.keyfairy.feature_home.presentation.viewmodel.LastPracticeViewModelFactory
 import com.example.keyfairy.feature_reports.domain.model.Practice
+import com.example.keyfairy.feature_reports.presentation.PracticeReportActivity
+import com.example.keyfairy.feature_reports.presentation.fragment.ReportsFragment
 import com.example.keyfairy.utils.common.BaseFragment
+import com.example.keyfairy.utils.common.NavigationManager
 import com.example.keyfairy.utils.storage.AuthenticationManager
 import com.example.keyfairy.utils.worker.toPendingVideo
 import com.example.keyfairy.utils.workers.VideoUploadManager
@@ -465,7 +469,7 @@ class HomeFragment : BaseFragment() {
             binding.pendingVideosRecycler.visibility = View.GONE
             binding.noPendingVideosLayout.visibility = View.VISIBLE
             binding.pendingCountBadge.visibility = View.GONE
-            binding.pendingVideosTitle.text = "Todos los videos sincronizados ✅"
+            binding.pendingVideosTitle.text = "Todos los videos sincronizados"
         } else {
             binding.pendingVideosRecycler.visibility = View.VISIBLE
             binding.noPendingVideosLayout.visibility = View.GONE
@@ -488,21 +492,15 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupClickListeners() {
-        binding.pendingVideosCard.setOnLongClickListener {
-            val trackedCount = videoUploadManager.getTrackedFilesCount()
-            val pendingCount = videoUploadManager.getCurrentUserPendingUploadsCount()
-            val hasBlocked = videoUploadManager.currentUserHasNetworkConstrainedWork()
+        binding.btnReports.setOnClickListener {
+            val reportsFragment = ReportsFragment()
 
-            Log.d("HomeFragment", "📊 Debug Info: tracked=$trackedCount pending=$pendingCount blocked=$hasBlocked")
-            Toast.makeText(requireContext(), "Debug: $trackedCount tracked, $pendingCount pending", Toast.LENGTH_SHORT).show()
-            true
-        }
-
-        binding.pendingVideosTitle.setOnLongClickListener {
-            cleanedWorks.clear()
-            cancellingWorks.clear()
-            Log.d("HomeFragment", "🧹 Manual cleanup - cleared tracking sets")
-            true
+            NavigationManager.navigateToFragment(
+                fragmentManager = parentFragmentManager,
+                fragment = reportsFragment,
+                containerId = R.id.fragment_container,
+                navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
+            )
         }
     }
 
@@ -568,10 +566,11 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun showErrorState(message: String) {
+        Log.d(TAG, "Error loading practice: $message")
         binding.datetime.text = "No disponible"
-        binding.scaleInfo.text = message
-        binding.numPosturalErrors.text = "N/A"
-        binding.numMusicalErrors.text = "N/A"
+        binding.scaleInfo.text = "No disponible"
+        binding.numPosturalErrors.text = "No disponible"
+        binding.numMusicalErrors.text = "No disponible"
     }
 
     private fun loadPracticeData(practice: Practice) {
@@ -579,13 +578,13 @@ class HomeFragment : BaseFragment() {
         binding.datetime.text = practice.getFormattedDateTime()
 
         // Cargar información de la escala
-        binding.scaleInfo.text = practice.getScaleFullName() + "\n" + practice.getPracticeInfo()
+        binding.scaleInfo.text = practice.scale + "\n" + practice.getPracticeInfo()
 
         binding.numPosturalErrors.text = "${practice.numPosturalErrors} errores posturales."
 
         binding.numMusicalErrors.text = "${practice.numMusicalErrors} errores musicales."
 
-        Log.d(TAG, "Practice data loaded: ${practice.getScaleFullName()} - ${practice.getFormattedDateTime()}")
+        Log.d(TAG, "Practice data loaded: ${practice.scale} - ${practice.getFormattedDateTime()}")
     }
 
     private fun handleUiEvent(event: LastPracticeEvent) {

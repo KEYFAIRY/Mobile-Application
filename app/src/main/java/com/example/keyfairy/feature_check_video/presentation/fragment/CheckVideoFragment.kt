@@ -59,6 +59,7 @@ class CheckVideoFragment : BaseFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupFullscreenMode()
+        lockToLandscape()
         setupVideoUploadManager()
         setupBackPressedHandler()
         extractArguments()
@@ -69,6 +70,16 @@ class CheckVideoFragment : BaseFragment() {
     private fun setupFullscreenMode() {
         (activity as? HomeActivity)?.enableFullscreen()
         (activity as? HomeActivity)?.hideBottomNavigation()
+    }
+
+    private fun lockToLandscape() {
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        Log.d("CheckVideo", "🔄 Screen orientation locked to landscape")
+    }
+
+    private fun unlockOrientation() {
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        Log.d("CheckVideo", "🔄 Screen orientation unlocked")
     }
 
     private fun setupVideoUploadManager() {
@@ -92,6 +103,7 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun deleteVideoAndReturn() {
         safeNavigate {
+            unlockOrientation()
             deleteOriginalVideo()
             if (isFragmentActive) {
                 Toast.makeText(
@@ -191,6 +203,7 @@ class CheckVideoFragment : BaseFragment() {
                     mediaPlayer.setVideoScalingMode(
                         android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                     )
+                    adjustVideoViewForLandscape(mediaPlayer)
                 } catch (e: Exception) {
                     Log.e("VideoPlayback", "Error setting video scaling: ${e.message}")
                 }
@@ -214,14 +227,45 @@ class CheckVideoFragment : BaseFragment() {
         }
     }
 
+    private fun adjustVideoViewForLandscape(mediaPlayer: android.media.MediaPlayer) {
+        try {
+            val videoWidth = mediaPlayer.videoWidth
+            val videoHeight = mediaPlayer.videoHeight
+
+            Log.d("VideoPlayback", "Original video dimensions: ${videoWidth}x${videoHeight}")
+
+            // Si el video está en portrait, rotarlo para landscape
+            if (videoHeight > videoWidth) {
+                Log.d("VideoPlayback", "Video is portrait, adjusting for landscape display")
+
+                // Rotar el VideoView 90 grados
+                binding.videoView.rotation = 90f
+
+                // Ajustar las dimensiones
+                val layoutParams = binding.videoView.layoutParams
+                layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                binding.videoView.layoutParams = layoutParams
+
+            } else {
+                Log.d("VideoPlayback", "Video is already landscape")
+                // El video ya está en landscape, solo asegurar que llene la pantalla
+                binding.videoView.rotation = 0f
+            }
+
+        } catch (e: Exception) {
+            Log.e("VideoPlayback", "Error adjusting video for landscape: ${e.message}")
+        }
+    }
+
     private fun setupClickListeners() {
-        binding.btnSave.setOnClickListener {
+        binding.btnDelete.setOnClickListener {
             safeNavigate {
                 deleteVideoAndRetry()
             }
         }
 
-        binding.btnDelete.setOnClickListener {
+        binding.btnSave.setOnClickListener {
             safeNavigate {
                 sendPracticeWithWorkManager()
             }
@@ -377,6 +421,7 @@ class CheckVideoFragment : BaseFragment() {
     }
 
     private fun navigateToCalibration() {
+        unlockOrientation()
         val calibrationFragment = CalibrateCameraFragment().apply {
             arguments = Bundle().apply {
                 putString("escalaName", escalaName)
@@ -403,6 +448,7 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun returnToPracticeFragmentAfterScheduling() {
         safeNavigate {
+            unlockOrientation()
             (activity as? HomeActivity)?.disableFullscreen()
             (activity as? HomeActivity)?.showBottomNavigation()
 
@@ -416,6 +462,7 @@ class CheckVideoFragment : BaseFragment() {
 
     private fun returnToPracticeFragment() {
         safeNavigate {
+            unlockOrientation()
             (activity as? HomeActivity)?.disableFullscreen()
             (activity as? HomeActivity)?.showBottomNavigation()
 
@@ -443,6 +490,8 @@ class CheckVideoFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        unlockOrientation()
 
         backPressedCallback?.remove()
         backPressedCallback = null

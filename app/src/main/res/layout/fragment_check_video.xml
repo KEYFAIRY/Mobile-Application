@@ -3,24 +3,29 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center">
+    android:gravity="center"
+    android:keepScreenOn="true">
 
+    <!-- ✅ VideoView configurado para landscape -->
     <VideoView
         android:id="@+id/videoView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_margin="16dp" />
+        android:layout_margin="16dp"
+        android:layout_gravity="center" />
 
+    <!-- ✅ Botones en parte inferior -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_margin="16dp">
+        android:layout_margin="16dp"
+        android:paddingBottom="16dp">
 
         <Button
-            android:id="@+id/btnSave"
+            android:id="@+id/btnDelete"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -30,7 +35,7 @@
             android:text="Repetir" />
 
         <Button
-            android:id="@+id/btnDelete"
+            android:id="@+id/btnSave"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
