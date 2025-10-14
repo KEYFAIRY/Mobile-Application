@@ -42,12 +42,6 @@
             android:textSize="14sp"
             android:text="Notas: Do, Re, Mi, Fa, Sol, La, Si" />
 
-        <TextView
-            android:id="@+id/text_fecha"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:text="Fecha: 12 de mayo 5 pm" />
     </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
