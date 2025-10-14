@@ -36,8 +36,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
+                android:layout_marginBottom="3dp"
+                android:gravity="center_vertical">
 
                 <ImageView
                     android:layout_width="18dp"
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
+                android:layout_marginBottom="3dp">
 
                 <ImageView
                     android:layout_width="18dp"
@@ -76,8 +76,7 @@
                     android:layout_height="wrap_content"
                     android:text="2025-10-2 , 12:00:00"
                     android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:layout_marginTop="2dp"/>
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
             <LinearLayout
@@ -85,7 +84,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
+                android:layout_marginBottom="3dp">
 
                 <ImageView
                     android:layout_width="18dp"
@@ -100,16 +99,14 @@
                     android:layout_height="wrap_content"
                     android:text="Errores posturales: 5"
                     android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:layout_marginTop="2dp"/>
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
+                android:gravity="center_vertical">
 
                 <ImageView
                     android:layout_width="18dp"
@@ -124,8 +121,7 @@
                     android:layout_height="wrap_content"
                     android:text="Errores musicales: 5"
                     android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:layout_marginTop="2dp"/>
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
 
