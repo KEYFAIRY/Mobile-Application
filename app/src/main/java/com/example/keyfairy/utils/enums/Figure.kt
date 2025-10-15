@@ -1,9 +1,9 @@
 package com.example.keyfairy.utils.enums
 
 enum class Figure(val value: Double, val label: String) {
-    BLANCA(0.5, "Blanca"),
+    BLANCA(2.0, "Blanca"),
     NEGRA(1.0, "Negra"),
-    CORCHEA(2.0, "Corchea");
+    CORCHEA(0.5, "Corchea");
 
     companion object {
         fun fromValue(value: Double): Figure? =

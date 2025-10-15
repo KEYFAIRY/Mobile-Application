@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
@@ -33,6 +34,7 @@ import com.example.keyfairy.feature_home.presentation.HomeActivity
 import com.example.keyfairy.utils.common.BaseFragment
 import com.example.keyfairy.utils.common.goBack
 import com.example.keyfairy.utils.common.navigateAndClearStack
+import kotlinx.coroutines.Runnable
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -66,6 +68,8 @@ class PracticeExecutionFragment : BaseFragment() {
     private var repeatingSoundHandler: Handler? = null
     private var repeatingSoundRunnable: Runnable? = null
     private var activeStreamId: Int? = null
+    private var metronomeBeatCount = 0L
+    private var metronomeStartTime = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -150,7 +154,8 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun calculateVideoLength() {
-        val secondsPerNote = (60 / (bpm ?: 120).toDouble())
+        val secondsPerNote = (60 / (bpm ?: 120).toDouble()) * figure!!
+        Log.i("FIGURE", figure.toString())
         msPerTick = (secondsPerNote * 1000).toLong()
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
         videoLength = ((secondsPerNote * numberOfNotes) * 1000).toLong()
@@ -228,30 +233,21 @@ class PracticeExecutionFragment : BaseFragment() {
         val startRecordingRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
-                // Wait 500ms before starting recording
-                val startMetronomeRunnable = Runnable {
-                    if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
-                        startMetronome(msPerTick)
-                    }
-                }
-                scheduledRunnables.add(startMetronomeRunnable)
-                scheduleHandler.postDelayed(startMetronomeRunnable, 100)
             }
         }
-
         scheduledRunnables.add(countdownRunnable)
         scheduledRunnables.add(startRecordingRunnable)
 
         scheduleHandler.postDelayed(countdownRunnable, 1000)
         scheduleHandler.postDelayed(startRecordingRunnable, 7000)
     }
-
     private fun cancelScheduledTasks() {
         scheduledRunnables.forEach { scheduleHandler.removeCallbacks(it) }
         scheduledRunnables.clear()
     }
 
     private fun startRecording(durationMillis: Long = 30000) {
+
         if (!isFragmentActive || hasNavigatedAway || hasCompletedRecording) {
             Log.d("Recording", "Fragment not active, skipping recording")
             return
@@ -313,6 +309,7 @@ class PracticeExecutionFragment : BaseFragment() {
                         "Grabación iniciada",
                         Toast.LENGTH_SHORT
                     ).show()
+                    startMetronome(msPerTick)
                 }
             }
 
@@ -380,12 +377,24 @@ class PracticeExecutionFragment : BaseFragment() {
         stopRepeatingSound()
 
         repeatingSoundHandler = Handler(Looper.getMainLooper())
+        metronomeBeatCount = 0L
+
         playSound("metronome_tick")
+        metronomeStartTime = SystemClock.elapsedRealtime()
+
+
         repeatingSoundRunnable = object : Runnable {
             override fun run() {
                 if (recording != null && isFragmentActive && !hasNavigatedAway) {
+                    metronomeBeatCount++
+
+                    // Calculate exact time for next beat
+                    val targetTime = metronomeStartTime + (metronomeBeatCount * intervalMs)
+                    val currentTime = SystemClock.elapsedRealtime()
+                    val actualDelay = (targetTime - currentTime).coerceAtLeast(0)
+
                     playSound("metronome_tick")
-                    repeatingSoundHandler?.postDelayed(this, intervalMs)
+                    repeatingSoundHandler?.postDelayed(this, actualDelay)
                 }
             }
         }
