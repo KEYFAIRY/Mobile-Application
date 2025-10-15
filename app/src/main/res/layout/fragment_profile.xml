@@ -28,16 +28,17 @@
                 android:layout_centerVertical="true"/>
 
             <!-- Botón Cerrar Sesión -->
-            <Button
+            <ImageButton
                 android:id="@+id/btn_logout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="Cerrar sesión"
-                android:background="@drawable/rounded_button_background"
-                app:backgroundTint="@color/dark_red"
-                android:textColor="@color/white"/>
+                android:src="@drawable/logout"
+                android:scaleType="centerCrop"
+                android:background="@android:color/transparent"
+                android:padding="0dp"
+                android:adjustViewBounds="true"/>
 
         </RelativeLayout>
 
@@ -48,57 +49,125 @@
             android:layout_centerInParent="true"
             android:orientation="vertical">
 
-            <!-- Nombre (Solo lectura) -->
-            <TextView
-                android:id="@+id/tv_name_label"
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Nombre"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginTop="50dp"
+                android:layout_marginBottom="20dp">
 
-            <TextView
-                android:id="@+id/tv_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/rounded_edittext_background"
-                android:padding="16dp"
-                android:layout_marginBottom="24dp"
-                android:text="Cargando..."
-                android:drawablePadding="8dp"/>
+                <ImageView
+                    android:id="@+id/imgPersonal"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/profile_red"
+                    app:tint="@color/dark_blue">
+                </ImageView>
 
-            <!-- Email (Solo lectura) -->
-            <TextView
-                android:id="@+id/tv_email_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Correo"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"/>
+                <!-- Nivel de Piano (Editable con Spinner) -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Datos personales"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_toEndOf="@+id/imgPersonal"
+                    android:layout_centerVertical="true"
+                    android:textColor="@color/dark_blue"
+                    android:layout_marginBottom="8dp"/>
+            </RelativeLayout>
 
-            <TextView
-                android:id="@+id/tv_email"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/rounded_edittext_background"
-                android:padding="16dp"
-                android:layout_marginBottom="24dp"
-                android:text="Cargando..."
-                android:drawablePadding="8dp"/>
 
-            <!-- Nivel de Piano (Editable con Spinner) -->
-            <TextView
-                android:id="@+id/tv_level_label"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Nivel de piano"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                android:backgroundTint="@color/light_blue">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:orientation="vertical">
+                    <!-- Nombre (Solo lectura) -->
+                    <TextView
+                        android:id="@+id/tv_name_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nombre"
+                        android:textSize="16sp"
+                        android:textColor="@color/dark_blue"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tv_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_edittext_background"
+                        android:backgroundTint="@color/white"
+                        android:padding="16dp"
+                        android:layout_marginBottom="24dp"
+                        android:text="Cargando..."
+                        android:drawablePadding="8dp"/>
+
+                    <!-- Email (Solo lectura) -->
+                    <TextView
+                        android:id="@+id/tv_email_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Correo"
+                        android:textSize="16sp"
+                        android:textColor="@color/dark_blue"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tv_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/white"
+                        android:background="@drawable/rounded_edittext_background"
+                        android:padding="16dp"
+                        android:text="Cargando..."
+                        android:drawablePadding="8dp"/>
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                android:layout_marginBottom="20dp">
+
+                <ImageView
+                    android:id="@+id/img"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/piano_brown">
+                </ImageView>
+
+                <!-- Nivel de Piano (Editable con Spinner) -->
+                <TextView
+                    android:id="@+id/tv_level_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Nivel de piano"
+                    android:textStyle="bold"
+                    android:textColor="@color/dark_brown"
+                    android:textSize="20sp"
+                    android:layout_centerVertical="true"
+                    android:layout_toEndOf="@+id/img"
+                    />
+            </RelativeLayout>
+
 
             <Spinner
                 android:id="@+id/spinner_piano_level"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:backgroundTint="@color/light_brown"
                 android:background="@drawable/rounded_edittext_background"
                 android:padding="16dp"
                 android:layout_marginBottom="32dp"/>
@@ -119,10 +188,10 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginBottom="16dp"
-                android:text="Guardar cambios"
+                android:text="Actualizar nivel de piano"
                 android:background="@drawable/rounded_button_background"
-                app:backgroundTint="@color/light_blue"
-                android:textColor="@color/dark_blue"
+                app:backgroundTint="@color/dark_brown"
+                android:textColor="@color/white"
                 android:enabled="false"/>
 
         </LinearLayout>

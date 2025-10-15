@@ -151,18 +151,15 @@ class ProfileFragment : BaseFragment() {
             when (state) {
                 is LogoutState.Idle -> {
                     binding.btnLogout.isEnabled = true
-                    binding.btnLogout.text = "Cerrar sesión"
                 }
                 is LogoutState.Loading -> {
                     binding.btnLogout.isEnabled = false
-                    binding.btnLogout.text = "Cerrando sesión..."
                 }
                 is LogoutState.Success -> {
                     safeNavigateToAuth()
                 }
                 is LogoutState.Error -> {
                     binding.btnLogout.isEnabled = true
-                    binding.btnLogout.text = "Cerrar sesión"
                     showError(state.message)
                 }
             }

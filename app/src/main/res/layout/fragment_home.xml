@@ -15,9 +15,9 @@
 
         <ImageView
             android:id="@+id/logo_placeholder"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:src="@drawable/keyfairy_logo"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:src="@drawable/logo"
             android:contentDescription="@string/app_name"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -35,7 +35,7 @@
             app:layout_constraintTop_toBottomOf="@id/logo_placeholder"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="5dp" />
 
         <Button
             android:id="@+id/btnReports"
@@ -58,7 +58,7 @@
             app:cardElevation="4dp"
             android:layout_marginTop="32dp"
             android:padding="16dp"
-            android:backgroundTint="#D19C74"
+            android:backgroundTint="@color/light_red"
             app:layout_constraintTop_toBottomOf="@id/btnReports"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -76,7 +76,7 @@
                     android:text="Tu última escala practicada"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/dark_brown"
+                    android:textColor="@color/dark_red"
                     android:layout_marginBottom="16dp"/>
 
                 <LinearLayout
@@ -89,13 +89,14 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:src="@drawable/calendar_brown"
-                        android:layout_marginEnd="16dp"/>
+                        android:layout_marginEnd="16dp"
+                        app:tint="@color/dark_red" />
                     <TextView
                         android:id="@+id/datetime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cargando..."
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/black"/>
                 </LinearLayout>
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -107,13 +108,14 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:src="@drawable/piano_brown"
-                        android:layout_marginEnd="16dp"/>
+                        android:layout_marginEnd="16dp"
+                        app:tint="@color/dark_red" />
                     <TextView
                         android:id="@+id/scaleInfo"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cargando..."
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/black"/>
                 </LinearLayout>
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -125,13 +127,14 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:src="@drawable/hand_brown"
+                        app:tint="@color/dark_red"
                         android:layout_marginEnd="16dp"/>
                     <TextView
                         android:id="@+id/numPosturalErrors"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cargando..."
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/black"/>
                 </LinearLayout>
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -143,14 +146,13 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:src="@drawable/music_note_red"
-                        android:layout_marginEnd="16dp"
-                        app:tint="@color/dark_brown" />
+                        android:layout_marginEnd="16dp" />
                     <TextView
                         android:id="@+id/numMusicalErrors"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cargando..."
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/black"/>
                 </LinearLayout>
 
             </LinearLayout>
