@@ -184,7 +184,7 @@ class PracticeExecutionFragment : BaseFragment() {
                     .setTargetRotation(Surface.ROTATION_90)
                     .build()
                     .also {
-                        previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
+                        previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
@@ -228,7 +228,14 @@ class PracticeExecutionFragment : BaseFragment() {
         val startRecordingRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
-                startMetronome(msPerTick)
+                // Wait 500ms before starting recording
+                val startMetronomeRunnable = Runnable {
+                    if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
+                        startMetronome(msPerTick)
+                    }
+                }
+                scheduledRunnables.add(startMetronomeRunnable)
+                scheduleHandler.postDelayed(startMetronomeRunnable, 100)
             }
         }
 
