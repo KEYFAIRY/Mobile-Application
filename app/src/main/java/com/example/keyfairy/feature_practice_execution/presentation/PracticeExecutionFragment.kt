@@ -70,6 +70,9 @@ class PracticeExecutionFragment : BaseFragment() {
     private var activeStreamId: Int? = null
     private var metronomeBeatCount = 0L
     private var metronomeStartTime = 0L
+    private var recordingStartTime = 0L
+    private var durationCheckHandler: Handler? = null
+    private var durationCheckRunnable: Runnable? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -155,12 +158,16 @@ class PracticeExecutionFragment : BaseFragment() {
 
     private fun calculateVideoLength() {
         val secondsPerNote = (60 / (bpm ?: 120).toDouble()) * figure!!
-        Log.i("FIGURE", figure.toString())
+
         msPerTick = (secondsPerNote * 1000).toLong()
+
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
         videoLength = ((secondsPerNote * numberOfNotes) * 1000).toLong()
+
+        // Se suma la duracion de un tick adicional para prevenir cortes justo en la nota final
         videoLength += (secondsPerNote * 1000).toLong()
-        Log.i("VIDEO-LEN", videoLength.toString())
+        Log.i("VIDEO-LEN2", videoLength.toString())
+        Log.i("NOTES", escalaNotes.toString())
     }
 
     private fun setupCamera() {
@@ -275,12 +282,18 @@ class PracticeExecutionFragment : BaseFragment() {
             .build()
 
         try {
+            recordingStartTime = System.currentTimeMillis()
+
             recording = videoCapture.output
                 .prepareRecording(requireContext(), mediaStoreOutputOptions)
                 .withAudioEnabled()
                 .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
                     handleRecordEvent(recordEvent)
                 }
+
+            // Start checking duration with high frequency
+            startDurationCheck(durationMillis + 500)
+
         } catch (e: SecurityException) {
             Log.e("Recording", "SecurityException: ${e.message}")
             if (isFragmentActive) {
@@ -291,12 +304,25 @@ class PracticeExecutionFragment : BaseFragment() {
                 ).show()
             }
         }
+    }
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (isFragmentActive && !hasNavigatedAway) {
-                stopRecording()
+    private fun startDurationCheck(targetDurationMillis: Long) {
+        durationCheckHandler = Handler(Looper.getMainLooper())
+        durationCheckRunnable = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - recordingStartTime
+
+                if (elapsed >= targetDurationMillis) {
+                    if (isFragmentActive && !hasNavigatedAway) {
+                        stopRecording()
+                    }
+                } else {
+                    // Check every 16ms (~60fps) for precise stopping
+                    durationCheckHandler?.postDelayed(this, 16)
+                }
             }
-        }, durationMillis)
+        }
+        durationCheckHandler?.post(durationCheckRunnable!!)
     }
 
     private fun handleRecordEvent(recordEvent: VideoRecordEvent) {
@@ -419,6 +445,12 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun stopRecording() {
+
+        durationCheckRunnable?.let {
+            durationCheckHandler?.removeCallbacks(it)
+        }
+        durationCheckHandler = null
+        durationCheckRunnable = null
         recording?.stop()
         recording = null
         stopRepeatingSound()
