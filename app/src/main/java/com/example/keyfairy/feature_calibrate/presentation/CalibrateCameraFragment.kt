@@ -20,11 +20,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.chaquo.python.Python
@@ -63,6 +69,8 @@ class CalibrateCameraFragment : BaseFragment() {
 
     private var segmentation: YOLO11Segmentation? = null
     private var calibratedCounts: Int = 0
+
+    private var videoCapture: VideoCapture<Recorder>? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -151,35 +159,63 @@ class CalibrateCameraFragment : BaseFragment() {
         startAutomaticCapture()
     }
 
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
-
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder().build().also {
-                previewView.scaleType = PreviewView.ScaleType.FILL_START
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-
-            imageAnalysis?.setAnalyzer(cameraExecutor) { imageProxy ->
-                if (shouldCaptureFrame && isFragmentActive) {
-                    processFrame(imageProxy)
-                }
-                imageProxy.close()
-            }
-
             try {
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                val preview = Preview.Builder()
+                    .setTargetRotation(previewView.display.rotation)
+                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                    .build()
+                    .also {
+                        previewView.scaleType = PreviewView.ScaleType.FILL_START
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
+
+                // 2) Build VideoCapture - Fuerza a camera X a utilizar la configuracion de grabado de video
+                val recorder = Recorder.Builder()
+                    .setQualitySelector(QualitySelector.from(Quality.HD))
+                    .build()
+                videoCapture = VideoCapture.withOutput(recorder)
+
+                imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setTargetRotation(previewView.display.rotation)
+                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                    .build()
+                    .also { analyzer ->
+                        analyzer.setAnalyzer(cameraExecutor) { imageProxy ->
+                            if (shouldCaptureFrame && isFragmentActive) {
+                                processFrame(imageProxy)
+                            }
+                            imageProxy.close()
+                        }
+                    }
+
                 cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
+                val camera = cameraProvider?.bindToLifecycle(
+                    this,
+                    cameraSelector,
+                    preview,
+                    videoCapture,
+                    imageAnalysis
+                )
+
+                Log.d("CameraFragment", "Camera bound successfully with video support")
+
             } catch (exc: Exception) {
                 Log.e("CameraFragment", "Camera initialization failed", exc)
-                Toast.makeText(requireContext(), "Error al inicializar cámara", Toast.LENGTH_SHORT).show()
+                if (isFragmentActive) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Error initializing camera: ${exc.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }, ContextCompat.getMainExecutor(requireContext()))
     }
