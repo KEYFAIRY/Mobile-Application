@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    android:backgroundTint="@color/light_blue">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+
+        <!-- Información del video -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/explication"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Flexion radial/cubital en mano derecha"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="@color/dark_blue"/>
+
+            <TextView
+                android:id="@+id/moment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:20 a 00:30"
+                android:textSize="12sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="2dp"/>
+
+            <TextView
+                android:id="@+id/duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10 segundos"
+                android:textColor="@color/black"
+                android:textSize="11sp"
+                android:layout_marginTop="2dp"/>
+
+        </LinearLayout>
+
+        <!-- Botón de acción -->
+        <Button
+            android:id="@+id/action_button"
+            android:text="Ver en video"
+            android:textColor="@color/white"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="4dp"
+            android:contentDescription="Ver en video"/>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

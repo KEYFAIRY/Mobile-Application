@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cache directory para archivos temporales -->
+    <cache-path name="cache" path="." />
+
+    <!-- Files directory para archivos privados -->
+    <files-path name="files" path="." />
+
+    <!-- Downloads directory si usas downloads públicos -->
+    <external-files-path name="external_files" path="." />
+
+    <!-- Para archivos en el directorio público Downloads - CORREGIDO -->
+    <external-path name="downloads" path="Download/" />
+
+    <!-- Para acceso completo al storage externo -->
+    <external-path name="external_storage" path="." />
+</paths>

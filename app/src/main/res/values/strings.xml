@@ -2,4 +2,7 @@
     <string name="app_name">Keyfairy</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="instrucciones_calibracion">1. Recuerda que debes enfocar tu teclado utilizando unicamente la seccion superior de la pantalla de calibracion (Seccion sin oscurecimiento) \n\n
+        2. Evita y remueve cualquier objeto blanco que se encuentre cerca de las teclas de tu instrumento, obstruyen la deteccion de tu teclado.\n\n
+    3. Procura que tu dispositivo se encuentre directamente encima de tu teclado con ayuda del cuello de ganzo o tripode, de tal manera que al finalizar la calibracion consigas un enfoque como el siguiente.</string>
 </resources>

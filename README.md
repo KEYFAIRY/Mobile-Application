@@ -33,3 +33,23 @@ com.example.keyfairy
 │   ├── 📁 network           # Retrofit, OkHttp config, interceptors
 │   └── 📁 storage           # Local storage, SharedPrefs, encrypted storage
 ```
+
+## Run the app
+
+Set config.properties file (in assets folder), with the following content:
+
+```bash
+# Configuration file - DO NOT COMMIT SENSITIVE DATA
+# Add this file to .gitignore if it contains production URLs
+
+# API Configuration
+base_url=actual api gateway url
+
+# Network Configuration
+connect_timeout=30
+read_timeout=30
+write_timeout=30
+
+# Debug Configuration
+enable_logging=true
+```
