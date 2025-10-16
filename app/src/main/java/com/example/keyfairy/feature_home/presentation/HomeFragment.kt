@@ -378,10 +378,6 @@ class HomeFragment : BaseFragment() {
                     videoUploadManager.cleanupCompletedWork(workId)
                     cleanedWorks.add(workId)
                     cancellingWorks.remove(workId)
-
-                    if (isFragmentActive) {
-                        Toast.makeText(requireContext(), "✅ Video subido: $scale", Toast.LENGTH_SHORT).show()
-                    }
                 }
             }
 

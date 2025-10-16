@@ -45,7 +45,11 @@ class PracticeReportActivity : AppCompatActivity() {
         setupBackPressedCallback()
         setupViews()
         loadPracticeData()
-        loadFragmentBasedOnState()
+        // loadFragmentBasedOnState()
+        val fragment = CompletedPracticeFragment.newInstance(practiceItem)
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
     }
 
     private fun setupBackPressedCallback() {

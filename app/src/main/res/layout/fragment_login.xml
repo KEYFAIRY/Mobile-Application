@@ -25,14 +25,18 @@
                 android:id="@+id/logo_placeholder"
                 android:layout_width="150dp"
                 android:layout_height="150dp"
-                android:src="@drawable/keyfairy_logo"
-                android:layout_marginBottom="30dp"/>
+                android:src="@drawable/logo"
+                android:contentDescription="@string/app_name"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="24dp" />
 
             <TextView
                 android:id="@+id/welcome_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bienvenid@ a Keyfairy"
+                android:text="Keyfairy"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/black"
