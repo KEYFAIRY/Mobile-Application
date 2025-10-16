@@ -1,47 +1,45 @@
 package com.example.keyfairy.feature_progress.data.remote.api
 
-
 import com.example.keyfairy.feature_progress.data.remote.dto.response.*
+import com.example.keyfairy.utils.network.StandardResponse
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-
 interface ProgressApi {
 
-    @GET("top-escalas-semanales")
+    @GET("analytics/top-escalas-semanales")
     suspend fun getTopEscalasSemanales(
         @Query("idStudent") idStudent: String?,
         @Query("anio") anio: Int,
         @Query("semana") semana: Int
-    ): Response<TopEscalasResponseList>
+    ): Response<StandardResponse<TopEscalasResponseList>>
 
-    @GET("tiempo-posturas-semanales")
+    @GET("analytics/tiempo-posturas-semanales")
     suspend fun getTiempoPosturasSemanales(
         @Query("idStudent") idStudent: String?,
         @Query("anio") anio: Int,
         @Query("semana") semana: Int
-    ): Response<TiempoPosturaResponseList>
+    ): Response<StandardResponse<TiempoPosturaResponseList>>
 
-    @GET("notas-resumen-semanales")
+    @GET("analytics/notas-resumen-semanales")
     suspend fun getNotasResumenSemanales(
         @Query("idStudent") idStudent: String?,
         @Query("anio") anio: Int,
         @Query("semana") semana: Int
-    ): Response<NotasResumenResponseList>
+    ): Response<StandardResponse<NotasResumenResponseList>>
 
-    @GET("errores-posturales-semanales")
+    @GET("analytics/errores-posturales-semanales")
     suspend fun getErroresPosturalesSemanales(
         @Query("idStudent") idStudent: String?,
         @Query("anio") anio: Int,
         @Query("semana") semana: Int
-    ): Response<ErroresPosturalesResponseList>
+    ): Response<StandardResponse<ErroresPosturalesResponseList>>
 
-    @GET("errores-musicales-semanales")
+    @GET("analytics/errores-musicales-semanales")
     suspend fun getErroresMusicalesSemanales(
         @Query("idStudent") idStudent: String?,
         @Query("anio") anio: Int,
         @Query("semana") semana: Int
-    ): Response<ErroresMusicalesResponseList>
-
+    ): Response<StandardResponse<ErroresMusicalesResponseList>>
 }

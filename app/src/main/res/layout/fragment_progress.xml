@@ -141,11 +141,13 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/arrow_blue2"
                     android:contentDescription="Escala anterior"
+                    android:src="@drawable/arrow_blue2"
+                    android:scaleType="fitCenter"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
 
                 <ImageView
                     android:id="@+id/erroresPosturalesImage"
@@ -162,14 +164,16 @@
 
                 <ImageButton
                     android:id="@+id/nextPosturalScaleButton"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Escala siguiente"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/arrow_blue"
-                    android:contentDescription="Escala siguiente"
+                    android:scaleType="fitCenter"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
             <TextView
@@ -190,11 +194,13 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/arrow_blue2"
                     android:contentDescription="Escala anterior"
+                    android:src="@drawable/arrow_blue2"
+                    android:scaleType="fitCenter"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
 
                 <ImageView
                     android:id="@+id/erroresMusicalesImage"
@@ -211,14 +217,16 @@
 
                 <ImageButton
                     android:id="@+id/nextMusicalScaleButton"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Escala siguiente"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/arrow_blue"
-                    android:contentDescription="Escala siguiente"
+                    android:scaleType="fitCenter"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

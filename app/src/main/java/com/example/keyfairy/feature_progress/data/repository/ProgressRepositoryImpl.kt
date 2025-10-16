@@ -6,14 +6,15 @@ import com.example.keyfairy.feature_progress.data.mapper.ProgressMapper
 import com.example.keyfairy.feature_progress.data.remote.api.ProgressApi
 import com.example.keyfairy.feature_progress.domain.model.*
 import com.example.keyfairy.feature_progress.domain.repository.ProgressRepository
+import com.example.keyfairy.utils.network.RetrofitClient
 import retrofit2.HttpException
 import java.net.HttpURLConnection
 
 
 class ProgressRepositoryImpl(
-    private val api: ProgressApi
 ) : ProgressRepository {
 
+    private val api: ProgressApi = RetrofitClient.createService(ProgressApi::class.java)
     companion object {
         private const val TAG = "ProgressRepositoryImpl"
     }
@@ -24,7 +25,7 @@ class ProgressRepositoryImpl(
         semana: Int
     ): Result<List<TopEscalasSemanales>> = safeApiCall(
         call = { api.getTopEscalasSemanales(idStudent, anio, semana) },
-        mapper = { it.data.map { dto -> ProgressMapper.toDomain(dto) } },
+        mapper = { it.data!!.data.map { dto -> ProgressMapper.toDomain(dto) } },
         context = "top scales"
     )
 
@@ -34,7 +35,7 @@ class ProgressRepositoryImpl(
         semana: Int
     ): Result<List<TiempoPosturas>> = safeApiCall(
         call = { api.getTiempoPosturasSemanales(idStudent, anio, semana) },
-        mapper = { it.data.map { dto -> ProgressMapper.toDomain(dto) } },
+        mapper = { it.data!!.data.map { dto -> ProgressMapper.toDomain(dto) } },
         context = "posture times"
     )
 
@@ -44,7 +45,7 @@ class ProgressRepositoryImpl(
         semana: Int
     ): Result<List<NotasResumen>> = safeApiCall(
         call = { api.getNotasResumenSemanales(idStudent, anio, semana) },
-        mapper = { it.data.map { dto -> ProgressMapper.toDomain(dto) } },
+        mapper = { it.data!!.data.map { dto -> ProgressMapper.toDomain(dto) } },
         context = "note summary"
     )
 
@@ -54,7 +55,7 @@ class ProgressRepositoryImpl(
         semana: Int
     ): Result<List<ErroresPosturales>> = safeApiCall(
         call = { api.getErroresPosturalesSemanales(idStudent, anio, semana) },
-        mapper = { it.data.map { dto -> ProgressMapper.toDomain(dto) } },
+        mapper = { it.data!!.data.map { dto -> ProgressMapper.toDomain(dto) } },
         context = "postural errors"
     )
 
@@ -64,7 +65,7 @@ class ProgressRepositoryImpl(
         semana: Int
     ): Result<List<ErroresMusicales>> = safeApiCall(
         call = { api.getErroresMusicalesSemanales(idStudent, anio, semana) },
-        mapper = { it.data.map { dto -> ProgressMapper.toDomain(dto) } },
+        mapper = { it.data!!.data.map { dto -> ProgressMapper.toDomain(dto) } },
         context = "musical errors"
     )
 
