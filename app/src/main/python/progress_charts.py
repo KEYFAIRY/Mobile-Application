@@ -1,117 +1,327 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pandas as pd
+from datetime import datetime
 import io
 import base64
-import pandas as pd
 
 
-# --------------------------
-# 🔹 Función utilitaria
-# --------------------------
-def fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+def _convertir_a_lista_python(datos):
+    if hasattr(datos, 'toArray'):
+        print(f"[PYTHON LOG {datetime.now().strftime('%H:%M:%S')}] Detectado ArrayList Java, convirtiendo a lista Python...")
+        datos = list(datos.toArray())
+    return datos
+
+
+def _mostrar_y_guardar(nombre, fig):
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png")
+    buffer.seek(0)
+    img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
     plt.close(fig)
-    return img_base64
+    print(f"[PYTHON LOG {datetime.now().strftime('%H:%M:%S')}] ✅ Gráfico '{nombre}' generado correctamente")
+    return img_str
 
 
-# ======================================================
-# 🔸 1. Top Escalas Semanales
-# ======================================================
-def top_escalas_graph(data):
-    df = pd.DataFrame(data)
-    df = df.sort_values('vecesPracticada', ascending=False)
+def top_escalas_graph(datos):
+    try:
+        print(f"[PYTHON LOG {datetime.now().strftime('%H:%M:%S')}] 🔸 Llamada a top_escalas_graph")
 
-    fig, ax = plt.subplots(figsize=(4, 3))
-    bars = ax.barh(df['escala'], df['vecesPracticada'], color='#8B0000')
-    ax.set_xlabel('Veces practicada')
-    ax.set_ylabel('Escala')
-    ax.set_title('Escalas más practicadas', fontsize=12, color='maroon')
+        datos = _convertir_a_lista_python(datos)
+        datos = [dict(
+            escala=str(item.getEscala()),
+            vecesPracticada=int(item.getVecesPracticada())
+        ) for item in datos]
 
-    for bar in bars:
-        ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,
-                f'{int(bar.get_width())}', va='center')
+        df = pd.DataFrame(datos)
+        df = df.sort_values(by="vecesPracticada", ascending=False).reset_index(drop=True)
 
-    plt.tight_layout()
-    return fig_to_base64(fig)
+        if len(df) >= 3:
+            orden_podio = [1, 0, 2]
+            df = df.iloc[orden_podio]
 
+        colores_podio = ["#a7b9e6", "#7b001c", "#b9824d"]
+        colores = (colores_podio * (len(df)//3 + 1))[:len(df)]
 
-# ======================================================
-# 🔸 2. Tiempo en buena y mala postura
-# ======================================================
-def posturas_graph(data):
-    df = pd.DataFrame(data)
-    df = df.sort_values('tiempoTotalSegundos', ascending=False)
+        fig, ax = plt.subplots(figsize=(4.5, 3.5))
+        bars = ax.bar(df["escala"], df["vecesPracticada"], color=colores, edgecolor="black")
 
-    fig, ax = plt.subplots(figsize=(5, 3))
+        ax.set_ylabel("")
+        ax.set_xlabel("")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        ax.tick_params(left=False, bottom=False)
+        ax.set_yticks([])
 
-    ax.barh(df['escala'], df['tiempoMalaPosturaSegundos']/60,
-            label='Tiempo en mala postura (min)', color='#d19a9a')
-    ax.barh(df['escala'], df['tiempoBuenaPosturaSegundos']/60,
-            label='Tiempo en buena postura (min)', color='#580F0F', left=df['tiempoMalaPosturaSegundos']/60)
+        posiciones = [2, 1, 3]
+        for i, bar in enumerate(bars):
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                0.05,
+                f"{posiciones[i]}",
+                ha='center', va='bottom',
+                color='black', fontsize=11, fontweight='bold',
+                bbox=dict(facecolor='white', edgecolor='black', boxstyle='circle')
+            )
 
-    ax.set_xlabel('Tiempo (min)')
-    ax.set_ylabel('Escala')
-    ax.set_title('Tiempo en buena y mala postura', fontsize=11)
-    ax.legend(fontsize=8)
+        plt.tight_layout(pad=1)
 
-    plt.tight_layout()
-    return fig_to_base64(fig)
+        return _mostrar_y_guardar("top_escalas", fig)
 
-
-# ======================================================
-# 🔸 3. Notas correctas e incorrectas
-# ======================================================
-def notas_graph(data):
-    df = pd.DataFrame(data)
-
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.barh(df['escala'], df['notasIncorrectas'], color='#ffbaba', label='Notas incorrectas')
-    ax.barh(df['escala'], df['notasCorrectas'], color='#8B0000', label='Notas correctas', left=df['notasIncorrectas'])
-
-    ax.set_xlabel('Cantidad')
-    ax.set_ylabel('Escala')
-    ax.set_title('Cantidad de notas correctas e incorrectas', fontsize=11)
-    ax.legend(fontsize=8)
-
-    plt.tight_layout()
-    return fig_to_base64(fig)
+    except Exception as e:
+        print(f"[PYTHON LOG] ❌ Error en top_escalas_graph: {e}")
 
 
-# ======================================================
-# 🔸 4. Errores Posturales Semanales
-# ======================================================
-def errores_posturales_graph(data):
-    df = pd.DataFrame(data)
-    df = df.sort_values('dia')
+# ==========================================================
+# 🔹 2. Errores Posturales
+# ==========================================================
+def errores_posturales_graph(datos):
 
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.plot(df['dia'], df['totalErroresPosturales'], marker='o', color='#577BC1', linewidth=2)
+    try:
+        print(f"[PYTHON LOG] 🔸 Llamada a errores_posturales_graph")
+        print(f"[PYTHON LOG] Datos recibidos: {datos}")
 
-    escala = df['escala'].iloc[0] if not df.empty else ''
-    ax.set_title(f"Progreso en errores posturales: {escala}", fontsize=11)
-    ax.set_xlabel("Fecha")
-    ax.set_ylabel("Cantidad de errores")
+        datos = _convertir_a_lista_python(datos)
 
-    plt.tight_layout()
-    return fig_to_base64(fig)
+        datos_procesados = [dict(
+            dia=str(item.getDia()),
+            totalErroresPosturales=int(item.getTotalErroresPosturales()),
+            escala=str(item.getEscala())
+        ) for item in datos]
+
+        df = pd.DataFrame(datos_procesados)
+        print(f"[PYTHON LOG] DataFrame creado:\n{df}")
+
+        df["dia_dt"] = pd.to_datetime(df["dia"])
+
+        df = df.sort_values(by='dia_dt')
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        LINE_COLOR = '#8AB6F9'
+
+        ax.plot(
+            df["dia_dt"],
+            df["totalErroresPosturales"],
+            marker='o',
+            linestyle='-',
+            color=LINE_COLOR,
+            linewidth=2,
+            markersize=5
+        )
+
+        ax.set_xlabel("Fecha", fontsize=10, labelpad=15)
+        ax.set_ylabel("Cantidad de errores", fontsize=10, labelpad=15)
+
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b'))
+
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+
+        ax.set_xlim(df["dia_dt"].min(), df["dia_dt"].max())
+
+        max_y = df["totalErroresPosturales"].max()
+        ax.set_ylim(0, max_y * 1.1)
+
+        from matplotlib.ticker import MaxNLocator
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        ax.grid(axis='y', linestyle='-', alpha=0.4, color='gray')
+        ax.grid(axis='x', visible=False) # Quitar la cuadrícula vertical si existe
+
+        return _mostrar_y_guardar("errores_posturales", fig)
+
+    except Exception as e:
+        print(f"[PYTHON LOG] ❌ Error en errores_posturales_graph: {e}")
+
+# ==========================================================
+# 🔹 3. Errores Musicales
+# ==========================================================
+def errores_musicales_graph(datos):
+
+    try:
+        print(f"[PYTHON LOG] 🔸 Llamada a errores_musicales_graph")
+        print(f"[PYTHON LOG] Datos recibidos: {datos}")
+
+        datos = _convertir_a_lista_python(datos)
+
+        datos_procesados = [dict(
+            escala=str(item.getEscala()),
+            totalErroresMusicales=int(item.getTotalErroresMusicales()),
+            dia=str(item.getDia())
+        ) for item in datos]
+
+        df = pd.DataFrame(datos_procesados)
+        print(f"[PYTHON LOG] DataFrame creado:\n{df}")
+
+        df["dia_dt"] = pd.to_datetime(df["dia"])
+
+        df = df.sort_values(by='dia_dt')
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        LINE_COLOR = '#8AB6F9'
+
+        ax.plot(
+            df["dia_dt"],
+            df["totalErroresMusicales"],
+            marker='o',
+            linestyle='-',
+            color=LINE_COLOR,
+            linewidth=2,
+            markersize=5
+        )
+
+        ax.set_xlabel("Fecha", fontsize=10, labelpad=15)
+        ax.set_ylabel("Cantidad de errores", fontsize=10, labelpad=15)
+
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b'))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+        ax.set_xlim(df["dia_dt"].min(), df["dia_dt"].max())
+
+        max_y = df["totalErroresMusicales"].max()
+        ax.set_ylim(0, max_y * 1.1)
+
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        ax.grid(axis='y', linestyle='-', alpha=0.4, color='gray')
+        ax.grid(axis='x', visible=False)
+
+        return _mostrar_y_guardar("errores_musicales", fig)
+
+    except Exception as e:
+        print(f"[PYTHON LOG] ❌ Error en errores_musicales_graph: {e}")
+
+# ==========================================================
+# 🔹 4. Posturas (Tiempos)
+# ==========================================================
+def posturas_graph(datos):
+
+    try:
+        print(f"[PYTHON LOG] 🔸 Llamada a posturas_graph")
+        print(f"[PYTHON LOG] Datos recibidos: {datos}")
+
+        COLOR_MALA_POSTURA = '#E9C4CD'
+        COLOR_BUENA_POSTURA = '#8D1E3A'
+
+        datos = _convertir_a_lista_python(datos)
+
+        datos_procesados = [dict(
+            escala=str(item.getEscala()),
+            tiempoMalaPosturaMinutos=float(item.getTiempoMalaPosturaSegundos()) / 60.0,
+            tiempoBuenaPosturaMinutos=float(item.getTiempoBuenaPosturaSegundos()) / 60.0
+        ) for item in datos]
+
+        df = pd.DataFrame(datos_procesados)
+        print(f"[PYTHON LOG] DataFrame de tiempos en minutos:\n{df}")
+
+        df = df.iloc[::-1]
+
+        fig, ax = plt.subplots(figsize=(6, 4)) # Ajuste de tamaño
+
+        ax.barh(
+            df["escala"],
+            df["tiempoBuenaPosturaMinutos"],
+            color=COLOR_BUENA_POSTURA,
+            label="Tiempo en buena postura (min)"
+        )
+
+        ax.barh(
+            df["escala"],
+            df["tiempoMalaPosturaMinutos"],
+            left=df["tiempoBuenaPosturaMinutos"],  # Apilamiento horizontal
+            color=COLOR_MALA_POSTURA,
+            label="Tiempo en mala postura (min)"
+        )
+
+        ax.set_xlabel("Tiempo (min)", fontsize=10)
+        ax.set_ylabel("", fontsize=10) # Se puede quitar el label del eje Y o dejar vacío
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(
+            handles[::-1],
+            labels[::-1],
+            loc='upper center',
+            bbox_to_anchor=(0.5, 1.15),
+            ncol=1,
+            frameon=False,
+            fontsize=9
+        )
+
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        return _mostrar_y_guardar("posturas", fig)
+
+    except Exception as e:
+        print(f"[PYTHON LOG] ❌ Error en posturas_graph: {e}")
 
 
-# ======================================================
-# 🔸 5. Errores Musicales Semanales
-# ======================================================
-def errores_musicales_graph(data):
-    df = pd.DataFrame(data)
-    df = df.sort_values('dia')
+# ==========================================================
+# 🔹 5. Notas (Correctas vs Incorrectas)
+# ==========================================================
+def notas_graph(datos):
 
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.plot(df['dia'], df['totalErroresMusicales'], marker='o', color='#9E77F4', linewidth=2)
+    try:
+        print(f"[PYTHON LOG] 🔸 Llamada a notas_graph")
+        print(f"[PYTHON LOG] Datos recibidos: {datos}")
 
-    escala = df['escala'].iloc[0] if not df.empty else ''
-    ax.set_title(f"Progreso en errores musicales: {escala}", fontsize=11)
-    ax.set_xlabel("Fecha")
-    ax.set_ylabel("Cantidad de errores")
+        COLOR_NOTAS_CORRECTAS = '#E9C4CD'
+        COLOR_NOTAS_INCORRECTAS = '#8D1E3A'
 
-    plt.tight_layout()
-    return fig_to_base64(fig)
+        datos = _convertir_a_lista_python(datos)
+
+        datos_procesados = [dict(
+            escala=str(item.getEscala()),
+            notasCorrectas=int(item.getNotasCorrectas()),
+            notasIncorrectas=int(item.getNotasIncorrectas())
+        ) for item in datos]
+
+        df = pd.DataFrame(datos_procesados)
+        print(f"[PYTHON LOG] DataFrame creado:\n{df}")
+
+        df = df.iloc[::-1]
+
+        fig, ax = plt.subplots(figsize=(7, 5)) # Ajuste de tamaño
+
+        ax.barh(
+            df["escala"],
+            df["notasCorrectas"],
+            color=COLOR_NOTAS_CORRECTAS,
+            label="Notas correctas"
+        )
+
+        ax.barh(
+            df["escala"],
+            df["notasIncorrectas"],
+            left=df["notasCorrectas"],  # Apilamiento horizontal
+            color=COLOR_NOTAS_INCORRECTAS,
+            label="Notas incorrectas"
+        )
+
+        ax.set_xlabel("Cantidad de notas", fontsize=10)
+        ax.set_ylabel("Escala", fontsize=10)
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(
+            handles,
+            labels,
+            loc='upper center',
+            bbox_to_anchor=(0.5, 1.15),
+            ncol=2,
+            frameon=False,
+            fontsize=9
+        )
+
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        return _mostrar_y_guardar("notas", fig)
+
+    except Exception as e:
+        print(f"[PYTHON LOG] ❌ Error en notas_graph: {e}")
