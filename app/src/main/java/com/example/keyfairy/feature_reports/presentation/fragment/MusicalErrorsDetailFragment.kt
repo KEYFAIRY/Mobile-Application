@@ -536,7 +536,7 @@ class MusicalErrorsDetailFragment : BaseFragment() {
 
             stopScheduledVideoPlayback()
 
-            val startTimeMs = convertTimeToMillis(error.min_sec)
+            val startTimeMs = convertTimeToMillis(error.min_sec.substringBefore('.'))
             val endTimeMs = startTimeMs + 1000
             val durationMs = endTimeMs - startTimeMs
 

@@ -92,7 +92,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:layout_marginTop="8dp"
-                android:background="#E0E0E0"
                 android:contentDescription="Gráfico de barras de escalas más practicadas"
                 android:scaleType="centerInside"
                 tools:src="@tools:sample/backgrounds/scenic" />
@@ -110,7 +109,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"
-                android:background="#E0E0E0"
                 android:contentDescription="Gráfico de tiempo en buena y mala postura"
                 android:scaleType="centerInside"
                 tools:src="@tools:sample/backgrounds/scenic" />
@@ -128,7 +126,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"
-                android:background="#E0E0E0"
                 android:contentDescription="Gráfico de notas correctas e incorrectas"
                 android:scaleType="centerInside"
                 tools:src="@tools:sample/backgrounds/scenic" />
@@ -165,7 +162,6 @@
                     android:layout_height="200dp"
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
-                    android:background="#E0E0E0"
                     android:scaleType="centerInside"
                     app:layout_constraintStart_toEndOf="@id/previousPosturalScaleButton"
                     app:layout_constraintEnd_toStartOf="@id/nextPosturalScaleButton"
@@ -218,7 +214,6 @@
                     android:layout_height="200dp"
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
-                    android:background="#E0E0E0"
                     android:scaleType="centerInside"
                     app:layout_constraintStart_toEndOf="@id/previousMusicalScaleButton"
                     app:layout_constraintEnd_toStartOf="@id/nextMusicalScaleButton"
