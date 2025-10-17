@@ -142,9 +142,11 @@ class ProgressViewModel(
                     _posturalScales.postValue(scales)
 
                     scales.firstOrNull()?.let { firstScale ->
+                        // Generar gráfica para la primera escala
                         generateGraph("errores_posturales_graph", grouped[firstScale]!!) { state ->
                             _erroresPosturalesGraph.postValue(state)
                         }
+                        _currentPosturalScaleIndex.postValue(0)
                     }
                 },
                 onFailure = {
@@ -168,6 +170,7 @@ class ProgressViewModel(
                         generateGraph("errores_musicales_graph", grouped[firstScale]!!) { state ->
                             _erroresMusicalesGraph.postValue(state)
                         }
+                        _currentMusicalScaleIndex.postValue(0)
                     }
                 },
                 onFailure = {

@@ -69,6 +69,16 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <Button
+                android:id="@+id/reportsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_gravity="center_horizontal"
+                android:text="Consulta Informes"
+                android:background="@drawable/rounded_button_background"
+                app:backgroundTint="@color/light_blue"
+                android:textColor="@color/dark_blue" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -128,7 +138,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Progreso en errores posturales: Re mayor"
+                android:text="Progreso en errores posturales:"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -181,7 +191,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Progreso en errores posturales: Re mayor"
+                android:text="Progreso en errores musicales: "
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -229,17 +239,6 @@
 
 
             </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <Button
-                android:id="@+id/reportsButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_gravity="center_horizontal"
-                android:text="Consulta Informes"
-                android:background="@drawable/rounded_button_background"
-                app:backgroundTint="@color/light_blue"
-                android:textColor="@color/dark_blue" />
 
         </LinearLayout>
     </ScrollView>
