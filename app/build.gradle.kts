@@ -56,7 +56,8 @@ chaquopy {
             install("numpy")
             install("music21 == 8.3.0")
             install("opencv-python-headless==4.5.1.48")
-
+            install("matplotlib")
+            install("pandas")
         }
     }
 }
