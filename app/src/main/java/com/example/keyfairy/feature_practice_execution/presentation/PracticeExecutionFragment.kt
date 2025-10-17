@@ -253,7 +253,7 @@ class PracticeExecutionFragment : BaseFragment() {
 
         scheduleHandler.postDelayed(countdownRunnable, 1000)
         scheduleHandler.postDelayed(startMetronomeRunnable, 7020)
-        scheduleHandler.postDelayed(startRecordingRunnable, 6900) // quizas restar lo que dura una nota
+        scheduleHandler.postDelayed(startRecordingRunnable, 6900)
     }
     private fun cancelScheduledTasks() {
         scheduledRunnables.forEach { scheduleHandler.removeCallbacks(it) }
