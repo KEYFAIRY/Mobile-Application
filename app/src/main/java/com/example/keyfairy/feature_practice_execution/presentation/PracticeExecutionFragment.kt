@@ -157,12 +157,12 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun calculateVideoLength() {
-        val secondsPerNote = (60 / (bpm ?: 120).toDouble()) * figure!!
+        val secondsPerNote = (60 / (bpm ?: 120).toDouble())
 
         msPerTick = (secondsPerNote * 1000).toLong()
 
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
-        videoLength = ((secondsPerNote * numberOfNotes) * 1000).toLong()
+        videoLength = ((secondsPerNote * numberOfNotes * figure!!) * 1000).toLong()
 
         // Se suma la duracion de un tick adicional para prevenir cortes justo en la nota final
         videoLength += (secondsPerNote * 1000).toLong()
@@ -237,16 +237,23 @@ class PracticeExecutionFragment : BaseFragment() {
         val countdownRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway) playSound("countdown")
         }
+        val startMetronomeRunnable = Runnable {
+            if (isFragmentActive && !hasNavigatedAway) {
+                startMetronome(msPerTick)
+            }
+        }
         val startRecordingRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
             }
         }
+        scheduledRunnables.add(startMetronomeRunnable)
         scheduledRunnables.add(countdownRunnable)
         scheduledRunnables.add(startRecordingRunnable)
 
         scheduleHandler.postDelayed(countdownRunnable, 1000)
-        scheduleHandler.postDelayed(startRecordingRunnable, 7000)
+        scheduleHandler.postDelayed(startMetronomeRunnable, 7020)
+        scheduleHandler.postDelayed(startRecordingRunnable, 6900)
     }
     private fun cancelScheduledTasks() {
         scheduledRunnables.forEach { scheduleHandler.removeCallbacks(it) }
@@ -328,6 +335,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun handleRecordEvent(recordEvent: VideoRecordEvent) {
         when (recordEvent) {
             is VideoRecordEvent.Start -> {
+
                 Log.d("VideoRecording", "Recording started")
                 if (isFragmentActive) {
                     Toast.makeText(
@@ -335,7 +343,6 @@ class PracticeExecutionFragment : BaseFragment() {
                         "Grabación iniciada",
                         Toast.LENGTH_SHORT
                     ).show()
-                    startMetronome(msPerTick)
                 }
             }
 
@@ -403,23 +410,28 @@ class PracticeExecutionFragment : BaseFragment() {
         stopRepeatingSound()
 
         repeatingSoundHandler = Handler(Looper.getMainLooper())
-        metronomeBeatCount = 0L
 
-        playSound("metronome_tick")
+        metronomeBeatCount = 0L
         metronomeStartTime = SystemClock.elapsedRealtime()
 
+        playSound("metronome_tick")
+
+        metronomeBeatCount++
 
         repeatingSoundRunnable = object : Runnable {
             override fun run() {
                 if (recording != null && isFragmentActive && !hasNavigatedAway) {
+                    // Play the current tick sound
+                    playSound("metronome_tick")
+
                     metronomeBeatCount++
 
-                    // Calculate exact time for next beat
                     val targetTime = metronomeStartTime + (metronomeBeatCount * intervalMs)
+
                     val currentTime = SystemClock.elapsedRealtime()
+
                     val actualDelay = (targetTime - currentTime).coerceAtLeast(0)
 
-                    playSound("metronome_tick")
                     repeatingSoundHandler?.postDelayed(this, actualDelay)
                 }
             }
