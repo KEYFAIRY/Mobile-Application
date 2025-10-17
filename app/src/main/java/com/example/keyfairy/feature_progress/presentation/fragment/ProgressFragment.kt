@@ -25,14 +25,13 @@ import java.util.Locale
 
 class ProgressFragment : BaseFragment() {
 
-    private var TAG: String = "ProgressFragment"
+    private val TAG = "ProgressFragment"
     private var _binding: FragmentProgressBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var viewModel: ProgressViewModel
-
-    // State for week navigation
     private lateinit var weekFields: WeekFields
+
     private var currentDate: LocalDate = LocalDate.now()
     private var currentYear: Int = currentDate.year
     private var currentWeek: Int = 0
@@ -52,7 +51,6 @@ class ProgressFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupClickListeners()
         setupObservers()
         updateWeekDisplay()
@@ -60,37 +58,32 @@ class ProgressFragment : BaseFragment() {
     }
 
     private fun setupViewModel() {
-        val progressRepository = ProgressRepositoryImpl()
-        val topEscalasUC = GetTopEscalasSemanalesUseCase(progressRepository)
-        val tiempoPosturasUC = GetTiempoPosturasSemanalesUseCase(progressRepository)
-        val notasResumenUC = GetNotasResumenSemanalesUseCase(progressRepository)
-        val erroresPosturalesUC = GetErroresPosturalesSemanalesUseCase(progressRepository)
-        val erroresMusicalesUC = GetErroresMusicalesSemanalesUseCase(progressRepository)
-
+        val repository = ProgressRepositoryImpl()
         val factory = ProgressViewModelFactory(
-            topEscalasUC,
-            tiempoPosturasUC,
-            notasResumenUC,
-            erroresPosturalesUC,
-            erroresMusicalesUC
+            GetTopEscalasSemanalesUseCase(repository),
+            GetTiempoPosturasSemanalesUseCase(repository),
+            GetNotasResumenSemanalesUseCase(repository),
+            GetErroresPosturalesSemanalesUseCase(repository),
+            GetErroresMusicalesSemanalesUseCase(repository)
         )
-
         viewModel = ViewModelProvider(this, factory)[ProgressViewModel::class.java]
     }
 
     private fun updateWeekDisplay() {
-        // Calculate first and last date of current week
-        val firstDayOfWeek = currentDate.with(weekFields.dayOfWeek(), 1)
-        val lastDayOfWeek = currentDate.with(weekFields.dayOfWeek(), 7)
+        val firstDay = currentDate.with(weekFields.dayOfWeek(), 1)
+        val lastDay = currentDate.with(weekFields.dayOfWeek(), 7)
         val formatter = DateTimeFormatter.ofPattern("MMM dd", Locale("es", "ES"))
-        val first = formatter.format(firstDayOfWeek)
-        val last = formatter.format(lastDayOfWeek)
-        binding.dateRangeTextView.text = "$first - $last"
+        binding.dateRangeTextView.text = "${formatter.format(firstDay)} - ${formatter.format(lastDay)}"
     }
 
     private fun loadDataForCurrentWeek() {
         val idStudent = SecureStorage.getUid()
-        Log.d(TAG, "Getting info for user ${idStudent}, year ${currentYear}, week ${currentWeek}")
+        Log.d(TAG, "📅 Cargando datos usuario=$idStudent año=$currentYear semana=$currentWeek")
+
+        resetAllGraphs()
+
+        viewModel.clearGraphStates()
+
         viewModel.loadTopEscalasGraph(idStudent, currentYear, currentWeek)
         viewModel.loadPosturasGraph(idStudent, currentYear, currentWeek)
         viewModel.loadNotasGraph(idStudent, currentYear, currentWeek)
@@ -98,102 +91,139 @@ class ProgressFragment : BaseFragment() {
         viewModel.loadErroresMusicalesSemana(idStudent, currentYear, currentWeek)
     }
 
+    private fun resetAllGraphs() {
+        with(binding) {
+            topEscalasImage.setImageDrawable(null)
+            posturasImage.setImageDrawable(null)
+            notasImage.setImageDrawable(null)
+            erroresPosturalesImage.setImageDrawable(null)
+            erroresMusicalesImage.setImageDrawable(null)
+
+            topEscalasImage.visibility = View.INVISIBLE
+            posturasImage.visibility = View.INVISIBLE
+            notasImage.visibility = View.INVISIBLE
+            erroresPosturalesImage.visibility = View.INVISIBLE
+            erroresMusicalesImage.visibility = View.INVISIBLE
+
+        }
+    }
+
     private fun setupObservers() {
-        // Escalas más practicadas
+        fun isFragmentActive(): Boolean = isAdded && _binding != null
+
         viewModel.topEscalasGraph.observe(viewLifecycleOwner) { state ->
+            if (!isFragmentActive()) return@observe
             when (state) {
                 is GraphState.Success -> {
                     binding.topEscalasImage.visibility = View.VISIBLE
                     binding.topEscalasImage.setImageBitmap(state.bitmap)
                 }
                 is GraphState.Error -> {
+                    binding.topEscalasImage.setImageDrawable(null)
                     binding.topEscalasImage.visibility = View.INVISIBLE
-                    Toast.makeText(requireContext(), "No hay datos de escalas más practicadas para esta semana.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "No hay datos de escalas más practicadas.", Toast.LENGTH_SHORT).show()
                 }
-                is GraphState.Loading -> {
-                    // Optionally show a loading spinner
-                }
-                else -> { }
+                else -> Unit
             }
         }
 
-        // Posturas
         viewModel.posturasGraph.observe(viewLifecycleOwner) { state ->
+            if (!isFragmentActive()) return@observe
             when (state) {
                 is GraphState.Success -> {
                     binding.posturasImage.visibility = View.VISIBLE
                     binding.posturasImage.setImageBitmap(state.bitmap)
                 }
                 is GraphState.Error -> {
+                    binding.posturasImage.setImageDrawable(null)
                     binding.posturasImage.visibility = View.INVISIBLE
-                    Toast.makeText(requireContext(), "No hay datos de posturas para esta semana.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "No hay datos de posturas.", Toast.LENGTH_SHORT).show()
                 }
-                is GraphState.Loading -> { }
-                else -> { }
+                else -> Unit
             }
         }
 
-        // Notas
         viewModel.notasGraph.observe(viewLifecycleOwner) { state ->
+            if (!isFragmentActive()) return@observe
             when (state) {
                 is GraphState.Success -> {
                     binding.notasImage.visibility = View.VISIBLE
                     binding.notasImage.setImageBitmap(state.bitmap)
                 }
                 is GraphState.Error -> {
+                    binding.notasImage.setImageDrawable(null)
                     binding.notasImage.visibility = View.INVISIBLE
-                    Toast.makeText(requireContext(), "No hay datos de notas para esta semana.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "No hay datos de notas.", Toast.LENGTH_SHORT).show()
                 }
-                is GraphState.Loading -> { }
-                else -> { }
+                else -> Unit
             }
         }
 
-        // Errores posturales
         viewModel.erroresPosturalesGraph.observe(viewLifecycleOwner) { state ->
+            if (!isFragmentActive()) return@observe
             when (state) {
                 is GraphState.Success -> {
                     binding.erroresPosturalesImage.visibility = View.VISIBLE
                     binding.erroresPosturalesImage.setImageBitmap(state.bitmap)
                 }
                 is GraphState.Error -> {
+                    binding.erroresPosturalesImage.setImageDrawable(null)
                     binding.erroresPosturalesImage.visibility = View.INVISIBLE
-                    Toast.makeText(requireContext(), "No hay datos de errores posturales para esta semana.", Toast.LENGTH_SHORT).show()
+                    binding.posturalScaleText.text = "Progreso en errores posturales:"
+                    Toast.makeText(requireContext(), "No hay errores posturales esta semana.", Toast.LENGTH_SHORT).show()
                 }
-                is GraphState.Loading -> { }
-                else -> { }
+                else -> Unit
             }
         }
+
         viewModel.currentPosturalScaleIndex.observe(viewLifecycleOwner) { index ->
+            if (!isFragmentActive()) return@observe
             val scales = viewModel.posturalScales.value ?: return@observe
             val scaleName = scales.getOrNull(index) ?: return@observe
-            binding.posturalScaleText.text = "Progreso en errores posturales: $scaleName"
+            binding.posturalScaleText.text = "Errores posturales: $scaleName"
         }
 
-        // Errores musicales
         viewModel.erroresMusicalesGraph.observe(viewLifecycleOwner) { state ->
+            if (!isFragmentActive()) return@observe
             when (state) {
                 is GraphState.Success -> {
                     binding.erroresMusicalesImage.visibility = View.VISIBLE
                     binding.erroresMusicalesImage.setImageBitmap(state.bitmap)
                 }
                 is GraphState.Error -> {
+                    binding.erroresMusicalesImage.setImageDrawable(null)
                     binding.erroresMusicalesImage.visibility = View.INVISIBLE
-                    Toast.makeText(requireContext(), "No hay datos de errores musicales para esta semana.", Toast.LENGTH_SHORT).show()
+                    binding.musicalScaleText.text = "Progreso en errores musicales:"
+                    Toast.makeText(requireContext(), "No hay errores musicales esta semana.", Toast.LENGTH_SHORT).show()
                 }
-                is GraphState.Loading -> { }
-                else -> { }
+                else -> Unit
             }
         }
+
         viewModel.currentMusicalScaleIndex.observe(viewLifecycleOwner) { index ->
+            if (!isFragmentActive()) return@observe
             val scales = viewModel.musicalScales.value ?: return@observe
             val scaleName = scales.getOrNull(index) ?: return@observe
-            binding.musicalScaleText.text = "Progreso en errores musicales: $scaleName"
+            binding.musicalScaleText.text = "Errores musicales: $scaleName"
+        }
+
+        viewModel.posturalScales.observe(viewLifecycleOwner) { scales ->
+            val hasMultiple = scales.size > 1
+            binding.previousPosturalScaleButton.visibility = if (hasMultiple) View.VISIBLE else View.INVISIBLE
+            binding.nextPosturalScaleButton.visibility = if (hasMultiple) View.VISIBLE else View.INVISIBLE
+            Log.d(TAG, "Postural scales: ${scales.size} → botones ${if (hasMultiple) "habilitados" else "inhabilitados"}")
+        }
+
+
+        viewModel.musicalScales.observe(viewLifecycleOwner) { scales ->
+            val hasMultiple = scales.size > 1
+            binding.previousMusicalScaleButton.visibility = if (hasMultiple) View.VISIBLE else View.INVISIBLE
+            binding.nextMusicalScaleButton.visibility = if (hasMultiple) View.VISIBLE else View.INVISIBLE
+            Log.d(TAG, "Musical scales: ${scales.size} → botones ${if (hasMultiple) "habilitados" else "inhabilitados"}")
         }
     }
 
     private fun setupClickListeners() {
-        // Semana anterior
         binding.previousWeekButton.setOnClickListener {
             currentDate = currentDate.minusWeeks(1)
             currentYear = currentDate.year
@@ -202,7 +232,6 @@ class ProgressFragment : BaseFragment() {
             loadDataForCurrentWeek()
         }
 
-        // Semana siguiente
         binding.nextWeekButton.setOnClickListener {
             currentDate = currentDate.plusWeeks(1)
             currentYear = currentDate.year
@@ -211,32 +240,21 @@ class ProgressFragment : BaseFragment() {
             loadDataForCurrentWeek()
         }
 
-        // Navegación informes
         binding.reportsButton.setOnClickListener {
             safeNavigate {
                 navigateWithBackStack(ReportsFragment(), R.id.fragment_container)
             }
         }
 
-        // Escalas posturales
-        binding.previousPosturalScaleButton.setOnClickListener {
-            viewModel.previousPosturalScale()
-        }
-        binding.nextPosturalScaleButton.setOnClickListener {
-            viewModel.nextPosturalScale()
-        }
-
-        // Escalas musicales
-        binding.previousMusicalScaleButton.setOnClickListener {
-            viewModel.previousMusicalScale()
-        }
-        binding.nextMusicalScaleButton.setOnClickListener {
-            viewModel.nextMusicalScale()
-        }
+        binding.previousPosturalScaleButton.setOnClickListener { viewModel.previousPosturalScale() }
+        binding.nextPosturalScaleButton.setOnClickListener { viewModel.nextPosturalScale() }
+        binding.previousMusicalScaleButton.setOnClickListener { viewModel.previousMusicalScale() }
+        binding.nextMusicalScaleButton.setOnClickListener { viewModel.nextMusicalScale() }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        resetAllGraphs()
         _binding = null
     }
 }

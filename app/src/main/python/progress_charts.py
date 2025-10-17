@@ -22,12 +22,23 @@ def _mostrar_y_guardar(nombre, fig):
     print(f"[PYTHON LOG {datetime.now().strftime('%H:%M:%S')}] ✅ Gráfico '{nombre}' generado correctamente")
     return img_str
 
+def _grafico_sin_datos(nombre, mensaje="Sin datos disponibles"):
+    fig, ax = plt.subplots(figsize=(4, 3))
+    ax.text(0.5, 0.5, mensaje, ha="center", va="center",
+            fontsize=12, color="gray", fontweight="bold")
+    ax.axis("off")
+    return _mostrar_y_guardar(nombre, fig)
 
 def top_escalas_graph(datos):
     try:
         print(f"[PYTHON LOG {datetime.now().strftime('%H:%M:%S')}] 🔸 Llamada a top_escalas_graph")
 
         datos = _convertir_a_lista_python(datos)
+
+        if not datos:
+            print("[PYTHON LOG] ⚠️ Lista vacía recibida en top_escalas_graph.")
+            return _grafico_sin_datos("errores_posturales")
+
         datos = [dict(
             escala=str(item.getEscala()),
             vecesPracticada=int(item.getVecesPracticada())
@@ -84,6 +95,10 @@ def errores_posturales_graph(datos):
         print(f"[PYTHON LOG] Datos recibidos: {datos}")
 
         datos = _convertir_a_lista_python(datos)
+
+        if not datos:
+            print("[PYTHON LOG] ⚠️ Lista vacía recibida en errores_posturales_graph.")
+            return _grafico_sin_datos("errores_posturales")
 
         datos_procesados = [dict(
             dia=str(item.getDia()),
@@ -149,6 +164,10 @@ def errores_musicales_graph(datos):
 
         datos = _convertir_a_lista_python(datos)
 
+        if not datos:
+            print("[PYTHON LOG] ⚠️ Lista vacía recibida en errores_musicales_graph.")
+            return _grafico_sin_datos("errores_musicales")
+
         datos_procesados = [dict(
             escala=str(item.getEscala()),
             totalErroresMusicales=int(item.getTotalErroresMusicales()),
@@ -210,6 +229,11 @@ def posturas_graph(datos):
         COLOR_BUENA_POSTURA = '#8D1E3A'
 
         datos = _convertir_a_lista_python(datos)
+
+        if not datos:
+            print("[PYTHON LOG] ⚠️ Lista vacía recibida en posturas_graph.")
+            return _grafico_sin_datos("posturas")
+
 
         datos_procesados = [dict(
             escala=str(item.getEscala()),
@@ -275,6 +299,10 @@ def notas_graph(datos):
         COLOR_NOTAS_INCORRECTAS = '#8D1E3A'
 
         datos = _convertir_a_lista_python(datos)
+
+        if not datos:
+            print("[PYTHON LOG] ⚠️ Lista vacía recibida en notas_graph.")
+            return _grafico_sin_datos("notas")
 
         datos_procesados = [dict(
             escala=str(item.getEscala()),

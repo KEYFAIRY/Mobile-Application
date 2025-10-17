@@ -132,21 +132,45 @@ class ProgressViewModel(
     }
 
     fun loadErroresPosturalesSemana(idStudent: String?, anio: Int, semana: Int) {
+        _erroresPosturalesGraph.postValue(GraphState.Loading)
+        _posturalScales.postValue(emptyList())
+        _currentPosturalScaleIndex.postValue(0)
+        _posturalDataGrouped = emptyMap()
+
         viewModelScope.launch {
             val result = getErroresPosturalesSemanalesUseCase.execute(idStudent, anio, semana)
             result.fold(
                 onSuccess = { list ->
-                    val grouped = list.groupBy { it.escala }
+                    if (list.isNullOrEmpty()) {
+                        _erroresPosturalesGraph.postValue(GraphState.Error("Sin datos"))
+                        return@fold
+                    }
+
+                    val grouped = list
+                        .filter { it.escala != null }
+                        .groupBy { it.escala!! }
+
+                    if (grouped.isEmpty()) {
+                        _erroresPosturalesGraph.postValue(GraphState.Error("Sin escalas válidas"))
+                        return@fold
+                    }
+
                     _posturalDataGrouped = grouped
                     val scales = grouped.keys.toList()
                     _posturalScales.postValue(scales)
 
+                    println("[VM LOG] Escalas posturales detectadas: $scales")
+
                     scales.firstOrNull()?.let { firstScale ->
-                        // Generar gráfica para la primera escala
-                        generateGraph("errores_posturales_graph", grouped[firstScale]!!) { state ->
-                            _erroresPosturalesGraph.postValue(state)
+                        val data = grouped[firstScale]
+                        if (data != null) {
+                            generateGraph("errores_posturales_graph", data) { state ->
+                                _erroresPosturalesGraph.postValue(state)
+                            }
+                            _currentPosturalScaleIndex.postValue(0)
+                        } else {
+                            _erroresPosturalesGraph.postValue(GraphState.Error("Datos inválidos para la escala"))
                         }
-                        _currentPosturalScaleIndex.postValue(0)
                     }
                 },
                 onFailure = {
@@ -156,21 +180,48 @@ class ProgressViewModel(
         }
     }
 
+
+
     fun loadErroresMusicalesSemana(idStudent: String?, anio: Int, semana: Int) {
+        _erroresMusicalesGraph.postValue(GraphState.Loading)
+        _musicalScales.postValue(emptyList())
+        _currentMusicalScaleIndex.postValue(0)
+        _musicalDataGrouped = emptyMap()
+
         viewModelScope.launch {
             val result = getErroresMusicalesSemanalesUseCase.execute(idStudent, anio, semana)
             result.fold(
                 onSuccess = { list ->
-                    val grouped = list.groupBy { it.escala }
+                    if (list.isNullOrEmpty()) {
+                        _erroresMusicalesGraph.postValue(GraphState.Error("Sin datos"))
+                        return@fold
+                    }
+
+                    val grouped = list
+                        .filter { it.escala != null }
+                        .groupBy { it.escala!! }
+
+                    if (grouped.isEmpty()) {
+                        _erroresMusicalesGraph.postValue(GraphState.Error("Sin escalas válidas"))
+                        return@fold
+                    }
+
                     _musicalDataGrouped = grouped
                     val scales = grouped.keys.toList()
                     _musicalScales.postValue(scales)
 
+                    println("[VM LOG] Escalas musicales detectadas: $scales")
+
                     scales.firstOrNull()?.let { firstScale ->
-                        generateGraph("errores_musicales_graph", grouped[firstScale]!!) { state ->
-                            _erroresMusicalesGraph.postValue(state)
+                        val data = grouped[firstScale]
+                        if (data != null) {
+                            generateGraph("errores_musicales_graph", data) { state ->
+                                _erroresMusicalesGraph.postValue(state)
+                            }
+                            _currentMusicalScaleIndex.postValue(0)
+                        } else {
+                            _erroresMusicalesGraph.postValue(GraphState.Error("Datos inválidos para la escala"))
                         }
-                        _currentMusicalScaleIndex.postValue(0)
                     }
                 },
                 onFailure = {
@@ -179,6 +230,8 @@ class ProgressViewModel(
             )
         }
     }
+
+
 
     fun nextPosturalScale() {
         val scales = _posturalScales.value ?: return
@@ -225,4 +278,14 @@ class ProgressViewModel(
             _erroresMusicalesGraph.postValue(state)
         }
     }
+    fun clearGraphStates() {
+        _topEscalasGraph.value = GraphState.Idle
+        _posturasGraph.value = GraphState.Idle
+        _notasGraph.value = GraphState.Idle
+        _erroresPosturalesGraph.value = GraphState.Idle
+        _erroresMusicalesGraph.value = GraphState.Idle
+    }
+
+
+
 }
