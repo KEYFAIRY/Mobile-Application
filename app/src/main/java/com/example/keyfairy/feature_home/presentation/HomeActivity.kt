@@ -123,39 +123,6 @@ class HomeActivity : AppCompatActivity() {
         )
     }
 
-    // Para navegación desde fragments (deprecated - usar extensiones)
-    @Deprecated("Use fragment extensions instead", ReplaceWith("fragment.navigateAndClearStack(targetFragment, R.id.fragment_container)"))
-    fun replaceFragment(fragment: Fragment) {
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
-        )
-    }
-
-    // Para flujos lineales (como práctica)
-    fun navigateToLinearFlow(fragment: Fragment) {
-        hideBottomNavigation()
-
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
-        )
-    }
-
-    // Para navegación modal/overlay
-    fun navigateToModal(fragment: Fragment) {
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.ADD_TO_STACK
-        )
-    }
-
     // Regresar a navegación principal
     fun returnToMainNavigation(fragment: Fragment) {
         showBottomNavigation()
