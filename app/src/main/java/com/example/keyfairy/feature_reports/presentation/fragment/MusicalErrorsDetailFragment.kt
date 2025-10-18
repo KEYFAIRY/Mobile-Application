@@ -434,13 +434,11 @@ class MusicalErrorsDetailFragment : BaseFragment() {
     // -------------------------------------------------------------------------
     private fun showVideoFileNotFoundError() {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Archivo de video no encontrado")
+            .setTitle("Video no encontrado")
             .setMessage(
-                "No se pudo acceder al archivo de video.\n\n" +
-                        "Posibles causas:\n" +
-                        "• El video fue movido o eliminado\n" +
-                        "• El archivo está en una ubicación no accesible\n" +
-                        "• Problemas con el almacenamiento del dispositivo"
+                "Esta práctica ha sido grabada con otro dispositivo, o has eliminado el video de tu galería.\n"
+                + "Recuerda que solo puedes ver los errores en el video si fue grabado con este dispositivo y no borraste el archivo de tu galería.\n"
+                + "Puedes acceder al reporte de la práctica (archivo PDF)."
             )
             .setPositiveButton("Cerrar") { _, _ ->
                 handler.postDelayed({
@@ -464,11 +462,7 @@ class MusicalErrorsDetailFragment : BaseFragment() {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("Error de reproducción")
             .setMessage(
-                "Error al reproducir el video.\n\n" +
-                        "Posibles causas:\n" +
-                        "• El archivo de video está dañado o corrupto\n" +
-                        "• Formato de video no compatible\n" +
-                        "• Problemas con el reproductor de video del sistema"
+                "Revisa el video en tu galería"
             )
             .setPositiveButton("Cerrar") { _, _ ->
                 handler.postDelayed({
