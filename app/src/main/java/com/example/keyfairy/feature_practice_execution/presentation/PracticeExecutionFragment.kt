@@ -237,22 +237,22 @@ class PracticeExecutionFragment : BaseFragment() {
         val countdownRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway) playSound("countdown")
         }
-        val startMetronomeRunnable = Runnable {
-            if (isFragmentActive && !hasNavigatedAway) {
-                startMetronome(msPerTick)
-            }
-        }
+//        val startMetronomeRunnable = Runnable {
+//            if (isFragmentActive && !hasNavigatedAway) {
+//                startMetronome(msPerTick)
+//            }
+//        }
         val startRecordingRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
             }
         }
-        scheduledRunnables.add(startMetronomeRunnable)
+//        scheduledRunnables.add(startMetronomeRunnable)
         scheduledRunnables.add(countdownRunnable)
         scheduledRunnables.add(startRecordingRunnable)
 
         scheduleHandler.postDelayed(countdownRunnable, 1000)
-        scheduleHandler.postDelayed(startMetronomeRunnable, 7020)
+//        scheduleHandler.postDelayed(startMetronomeRunnable, 7010)
         scheduleHandler.postDelayed(startRecordingRunnable, 6900)
     }
     private fun cancelScheduledTasks() {
@@ -335,6 +335,9 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun handleRecordEvent(recordEvent: VideoRecordEvent) {
         when (recordEvent) {
             is VideoRecordEvent.Start -> {
+                requireActivity().runOnUiThread {
+                    startMetronome(msPerTick)
+                }
 
                 Log.d("VideoRecording", "Recording started")
                 if (isFragmentActive) {
