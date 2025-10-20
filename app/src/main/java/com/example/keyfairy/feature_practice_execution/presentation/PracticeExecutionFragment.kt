@@ -15,6 +15,7 @@ import android.view.LayoutInflater
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -74,6 +75,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private var durationCheckHandler: Handler? = null
     private var durationCheckRunnable: Runnable? = null
 
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -92,6 +94,7 @@ class PracticeExecutionFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setupFullscreenMode()
 
         // Verificar permisos antes de continuar
@@ -539,7 +542,7 @@ class PracticeExecutionFragment : BaseFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         stopCamera()
-
+        requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (this::cameraExecutor.isInitialized) {
             cameraExecutor.shutdown()
         }
