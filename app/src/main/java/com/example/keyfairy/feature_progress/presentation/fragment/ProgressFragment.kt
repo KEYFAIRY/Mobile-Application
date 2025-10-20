@@ -22,6 +22,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import android.view.Window
+import android.view.WindowManager
+import android.widget.ImageView
 
 class ProgressFragment : BaseFragment() {
 
@@ -55,6 +60,23 @@ class ProgressFragment : BaseFragment() {
         setupObservers()
         updateWeekDisplay()
         loadDataForCurrentWeek()
+    }
+
+    private fun showZoomDialog(bitmap: Bitmap) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_zoom_image, null)
+
+        val imageView = dialogView.findViewById<ImageView>(R.id.zoomImageView)
+        imageView.setImageBitmap(bitmap)
+
+        val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(dialogView)
+
+        dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+
+        dialogView.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 
     private fun setupViewModel() {
@@ -250,6 +272,51 @@ class ProgressFragment : BaseFragment() {
         binding.nextPosturalScaleButton.setOnClickListener { viewModel.nextPosturalScale() }
         binding.previousMusicalScaleButton.setOnClickListener { viewModel.previousMusicalScale() }
         binding.nextMusicalScaleButton.setOnClickListener { viewModel.nextMusicalScale() }
+
+        binding.topEscalasImage.setOnClickListener {
+            val drawable = binding.topEscalasImage.drawable
+            if (drawable is BitmapDrawable) {
+                showZoomDialog(drawable.bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Imagen no disponible para expandir", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.posturasImage.setOnClickListener {
+            val drawable = binding.posturasImage.drawable
+            if (drawable is BitmapDrawable) {
+                showZoomDialog(drawable.bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Imagen no disponible para expandir", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.notasImage.setOnClickListener {
+            val drawable = binding.notasImage.drawable
+            if (drawable is BitmapDrawable) {
+                showZoomDialog(drawable.bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Imagen no disponible para expandir", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.erroresPosturalesImage.setOnClickListener {
+            val drawable = binding.erroresPosturalesImage.drawable
+            if (drawable is BitmapDrawable) {
+                showZoomDialog(drawable.bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Imagen no disponible para expandir", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.erroresMusicalesImage.setOnClickListener {
+            val drawable = binding.erroresMusicalesImage.drawable
+            if (drawable is BitmapDrawable) {
+                showZoomDialog(drawable.bitmap)
+            } else {
+                Toast.makeText(requireContext(), "Imagen no disponible para expandir", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onDestroyView() {
