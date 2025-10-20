@@ -3,7 +3,7 @@ from music21 import scale
 def obtener_escalas():
     traducciones_escalas = {
         'MajorScale': 'Mayor',
-        'HarmonicMinorScale': 'Menor armónica'
+        'MinorScale': 'Menor'
     }
 
     notas_latinas = {
