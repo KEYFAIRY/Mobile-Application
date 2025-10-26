@@ -160,15 +160,17 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun calculateVideoLength() {
-        val secondsPerNote = (60 / (bpm ?: 120).toDouble())
+        val secondsPerBeat = (60 / (bpm ?: 120).toDouble())
 
-        msPerTick = (secondsPerNote * 1000).toLong()
+        msPerTick = (secondsPerBeat * 1000).toLong()
 
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
-        videoLength = ((secondsPerNote * numberOfNotes * figure!!) * 1000).toLong()
+        videoLength = ((secondsPerBeat * numberOfNotes * figure!!) * 1000).toLong()
 
-        // Se suma la duracion de un tick adicional para prevenir cortes justo en la nota final
-        videoLength += (secondsPerNote * 1000).toLong()
+        // Se suma la duracion de 5 beats adicionales
+        // Esto permite ignorar los 4 primeros desde el back
+        // Y prevenir cortes justo en la nota final
+        videoLength += (secondsPerBeat* 5 * 1000).toLong()
         Log.i("VIDEO-LEN2", videoLength.toString())
         Log.i("NOTES", escalaNotes.toString())
     }
