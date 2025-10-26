@@ -420,7 +420,7 @@ class PracticeExecutionFragment : BaseFragment() {
         metronomeBeatCount = 0L
         metronomeStartTime = SystemClock.elapsedRealtime()
 
-        playSound("metronome_tick")
+        playSound("sharp_metronome_tick")
 
         metronomeBeatCount++
 
@@ -428,7 +428,12 @@ class PracticeExecutionFragment : BaseFragment() {
             override fun run() {
                 if (recording != null && isFragmentActive && !hasNavigatedAway) {
                     // Play the current tick sound
-                    playSound("metronome_tick")
+                    if ((metronomeBeatCount % 4).toInt() == 0){
+                        playSound("sharp_metronome_tick")
+                    }
+                    else {
+                        playSound("metronome_tick")
+                    }
 
                     metronomeBeatCount++
 
@@ -492,6 +497,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun preloadSounds() {
         soundIds["countdown"] = loadSound(R.raw.instruccioncuentaregresivasound)
         soundIds["metronome_tick"] = loadSound(R.raw.metronome_tick)
+        soundIds["sharp_metronome_tick"] = loadSound(R.raw.sharp_metronome_tick)
         Log.i("PLAYER", "All sounds preloaded")
     }
 
