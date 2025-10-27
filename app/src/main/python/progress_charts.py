@@ -53,6 +53,7 @@ def top_escalas_graph(datos):
             df = pd.DataFrame(datos)
             df = df.sort_values(by="vecesPracticada", ascending=False).reset_index(drop=True)
 
+            # Reordenar si hay al menos 3 valores
             if len(df) >= 3:
                 orden_podio = [1, 0, 2]
                 df = df.iloc[orden_podio]
@@ -63,6 +64,7 @@ def top_escalas_graph(datos):
             fig, ax = plt.subplots(figsize=(4.5, 3.5))
             bars = ax.bar(df["escala"], df["vecesPracticada"], color=colores, edgecolor="black")
 
+            # Limpieza visual
             ax.set_ylabel("")
             ax.set_xlabel("")
             ax.spines["top"].set_visible(False)
@@ -72,14 +74,23 @@ def top_escalas_graph(datos):
             ax.tick_params(left=False, bottom=False)
             ax.set_yticks([])
 
-            posiciones = [2, 1, 3]
+            # Generar etiquetas dinámicamente
+            if len(df) >= 3:
+                posiciones = [2, 1, 3]  # estilo podio
+            else:
+                # Si hay 1 o 2, usar 1, 2...
+                posiciones = list(range(1, len(df) + 1))
+
             for i, bar in enumerate(bars):
                 ax.text(
-                    bar.get_x() + bar.get_width()/2,
+                    bar.get_x() + bar.get_width() / 2,
                     0.05,
                     f"{posiciones[i]}",
-                    ha='center', va='bottom',
-                    color='black', fontsize=11, fontweight='bold',
+                    ha='center',
+                    va='bottom',
+                    color='black',
+                    fontsize=11,
+                    fontweight='bold',
                     bbox=dict(facecolor='white', edgecolor='black', boxstyle='circle')
                 )
 

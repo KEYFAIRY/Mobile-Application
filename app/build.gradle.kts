@@ -106,4 +106,6 @@ dependencies {
 
     // Worker
     implementation("androidx.work:work-runtime-ktx:2.8.1")
+    //Sync Now
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
 }
