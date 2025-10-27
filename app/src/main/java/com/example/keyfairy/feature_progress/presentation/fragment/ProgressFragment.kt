@@ -27,6 +27,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.view.Window
 import android.view.WindowManager
 import android.widget.ImageView
+import android.widget.ImageButton
 
 class ProgressFragment : BaseFragment() {
 
@@ -65,19 +66,26 @@ class ProgressFragment : BaseFragment() {
     private fun showZoomDialog(bitmap: Bitmap) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_zoom_image, null)
 
-        val imageView = dialogView.findViewById<ImageView>(R.id.zoomImageView)
+        val imageView = dialogView.findViewById<com.github.chrisbanes.photoview.PhotoView>(R.id.zoomImageView)
         imageView.setImageBitmap(bitmap)
 
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(dialogView)
 
-        dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+        val closeButton = dialogView.findViewById<ImageButton>(R.id.closeButton)
+        closeButton.setOnClickListener { dialog.dismiss() }
+
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT
+        )
 
         dialogView.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
     }
+
 
     private fun setupViewModel() {
         val repository = ProgressRepositoryImpl()
