@@ -37,8 +37,8 @@ Each feature folder has the following structure:
 ├── 📁 data               # Data layer
 │   ├── 📁 mapper         # Maps DTOs to domain entities
 │   ├── 📁 remote         # Communication with the backend
-│   |   ├── 📁 api        # Interfaces for making backend requests
-│   |   └── 📁 dto        # DTOs for receiving backend responses
+│   │   ├── 📁 api        # Interfaces for making backend requests
+│   │   └── 📁 dto        # DTOs for receiving backend responses
 │   └── 📁 repository     # Repository implementations for data operations
 ├── 📁 domain             # Domain layer
 │   ├── 📁 model          # Domain models
