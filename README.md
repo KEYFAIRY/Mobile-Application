@@ -9,29 +9,25 @@ Kotlin code of mobile application.
 ```bash
 com.example.keyfairy
 │
-├── 📁 feature_auth
-│   ├── 📁 data
-│   │   ├── 📁 mapper        # Maps between DTOs and domain models
-│   │   ├── 📁 remote
-│   │   │   ├── 📁 api       # Auth API definitions (Retrofit interfaces)
-│   │   │   ├── 📁 dto       # Data Transfer Objects for authentication
-│   │   │   └── 📁 repository # Auth repository implementations
-│   ├── 📁 domain
-│   │   ├── 📁 model         # Auth-related domain entities
-│   │   ├── 📁 repository    # Auth repository interfaces
-│   │   └── 📁 usecase       # Business logic for authentication
-│   └── 📁 presentation     # UI screens, ViewModels, adapters for Auth
-│
-├── 📁 feature_calibrate    # Pending structure for feature_calibrate
-├── 📁 feature_practice    # Same structure as feature_auth but specific to feature_practice
-├── 📁 feature_profile    # Same structure as feature_auth but specific to feature_profile
-├── 📁 feature_progress    # Same structure as feature_auth but specific to feature_progress
-├── 📁 feature_reports    # Same structure as feature_auth but specific to feature_reports
+├── 📁 feature_auth                  # Inicios de sesión y creación de cuenta
+├── 📁 feature_practice              # Selección de escala a practicar
+├── 📁 feature_calibrate             # Calibración de cámara
+├── 📁 feature_practice_execution    # Grabación de práctica
+├── 📁 feature_check_video           # Ver video de práctica antes de enviarlo
+├── 📁 feature_profile               # Perfil del usuario
+├── 📁 feature_home                  # Pantalla principal
+├── 📁 feature_progress              # Estadísticas de las práctias
+├── 📁 feature_reports               # Historial de prácticas con sus reportes
 │
 ├── 📁 utils
-│   ├── 📁 common            # General utilities and extensions
-│   ├── 📁 network           # Retrofit, OkHttp config, interceptors
-│   └── 📁 storage           # Local storage, SharedPrefs, encrypted storage
+│   ├── 📁 common           # Utilidades y extensiones comunes
+│   ├── 📁 network          # Retrofit, OkHttp, interceptores
+│   ├── 📁 enums            # Enums de la aplicación
+│   ├── 📁 worker           # Configuración y funcionalidad del Work Manager
+│   └── 📁 storage          # Almacenamiento local
+│
+├── KeyFairyApplication.kt  # Inicializa la aplicación
+└── MainActivity.kt         # Actividad principal
 ```
 
 ## Run the app
