@@ -9,26 +9,49 @@ Kotlin code of mobile application.
 ```bash
 com.example.keyfairy
 │
-├── 📁 feature_auth                  # Inicios de sesión y creación de cuenta
-├── 📁 feature_practice              # Selección de escala a practicar
-├── 📁 feature_calibrate             # Calibración de cámara
-├── 📁 feature_practice_execution    # Grabación de práctica
-├── 📁 feature_check_video           # Ver video de práctica antes de enviarlo
-├── 📁 feature_profile               # Perfil del usuario
-├── 📁 feature_home                  # Pantalla principal
-├── 📁 feature_progress              # Estadísticas de las práctias
-├── 📁 feature_reports               # Historial de prácticas con sus reportes
+├── 📁 feature_auth                  # Login and account creation
+├── 📁 feature_practice              # Scale selection for practice
+├── 📁 feature_calibrate             # Camera calibration
+├── 📁 feature_practice_execution    # Practice recording
+├── 📁 feature_check_video           # Preview practice video before sending
+├── 📁 feature_profile               # User profile
+├── 📁 feature_home                  # Main screen
+├── 📁 feature_progress              # Practice statistics
+├── 📁 feature_reports               # Practice history with reports
 │
 ├── 📁 utils
-│   ├── 📁 common           # Utilidades y extensiones comunes
-│   ├── 📁 network          # Retrofit, OkHttp, interceptores
-│   ├── 📁 enums            # Enums de la aplicación
-│   ├── 📁 worker           # Configuración y funcionalidad del Work Manager
-│   └── 📁 storage          # Almacenamiento local
+│   ├── 📁 common           # Common utilities and extensions
+│   ├── 📁 network          # Retrofit, OkHttp, interceptors
+│   ├── 📁 enums            # Application enums
+│   ├── 📁 worker           # Work Manager configuration and functionality
+│   └── 📁 storage          # Local storage
 │
-├── KeyFairyApplication.kt  # Inicializa la aplicación
-└── MainActivity.kt         # Actividad principal
+├── KeyFairyApplication.kt  # Initializes the application
+└── MainActivity.kt         # Main activity
 ```
+
+Each feature folder has the following structure:
+
+```bash
+📁 feature_<module>
+├── 📁 data               # Data layer
+│   ├── 📁 mapper         # Maps DTOs to domain entities
+│   ├── 📁 remote         # Communication with the backend
+│   |   ├── 📁 api        # Interfaces for making backend requests
+│   |   └── 📁 dto        # DTOs for receiving backend responses
+│   └── 📁 repository     # Repository implementations for data operations
+├── 📁 domain             # Domain layer
+│   ├── 📁 model          # Domain models
+│   ├── 📁 repository     # Interfaces for data operations
+│   └── 📁 use_case       # Use cases (business logic)
+├── 📁 presentation       # Presentation layer
+│   ├── 📁 activity       # Activities
+│   ├── 📁 fragment       # Fragments
+│   ├── 📁 state          # UI states
+│   ├── 📁 viewmodel      # ViewModels for managing UI states
+│   └── 📁 adapter        # Adapters
+```
+
 
 ## Run the app
 
