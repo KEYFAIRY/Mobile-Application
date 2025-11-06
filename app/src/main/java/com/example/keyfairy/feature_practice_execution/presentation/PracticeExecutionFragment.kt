@@ -160,15 +160,17 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun calculateVideoLength() {
-        val secondsPerNote = (60 / (bpm ?: 120).toDouble())
+        val secondsPerBeat = (60 / (bpm ?: 120).toDouble())
 
-        msPerTick = (secondsPerNote * 1000).toLong()
+        msPerTick = (secondsPerBeat * 1000).toLong()
 
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
-        videoLength = ((secondsPerNote * numberOfNotes * figure!!) * 1000).toLong()
+        videoLength = ((secondsPerBeat * numberOfNotes * figure!!) * 1000).toLong()
 
-        // Se suma la duracion de un tick adicional para prevenir cortes justo en la nota final
-        videoLength += (secondsPerNote * 1000).toLong()
+        // Se suma la duracion de 5 beats adicionales
+        // Esto permite ignorar los 4 primeros desde el back
+        // Y prevenir cortes justo en la nota final
+        videoLength += (secondsPerBeat* 5 * 1000).toLong()
         Log.i("VIDEO-LEN2", videoLength.toString())
         Log.i("NOTES", escalaNotes.toString())
     }
@@ -420,7 +422,7 @@ class PracticeExecutionFragment : BaseFragment() {
         metronomeBeatCount = 0L
         metronomeStartTime = SystemClock.elapsedRealtime()
 
-        playSound("metronome_tick")
+        playSound("sharp_metronome_tick")
 
         metronomeBeatCount++
 
@@ -428,7 +430,12 @@ class PracticeExecutionFragment : BaseFragment() {
             override fun run() {
                 if (recording != null && isFragmentActive && !hasNavigatedAway) {
                     // Play the current tick sound
-                    playSound("metronome_tick")
+                    if ((metronomeBeatCount % 4).toInt() == 0){
+                        playSound("sharp_metronome_tick")
+                    }
+                    else {
+                        playSound("metronome_tick")
+                    }
 
                     metronomeBeatCount++
 
@@ -492,6 +499,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun preloadSounds() {
         soundIds["countdown"] = loadSound(R.raw.instruccioncuentaregresivasound)
         soundIds["metronome_tick"] = loadSound(R.raw.metronome_tick)
+        soundIds["sharp_metronome_tick"] = loadSound(R.raw.sharp_metronome_tick)
         Log.i("PLAYER", "All sounds preloaded")
     }
 
