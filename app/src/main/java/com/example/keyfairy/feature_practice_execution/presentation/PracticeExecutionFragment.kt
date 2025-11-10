@@ -2,6 +2,7 @@ package com.example.keyfairy.feature_practice_execution.presentation
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.SoundPool
 import android.net.Uri
@@ -524,6 +525,7 @@ class PracticeExecutionFragment : BaseFragment() {
 
     override fun onPause() {
         super.onPause()
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         if (!hasNavigatedAway && !hasCompletedRecording) {
             stopCamera()
             stopRepeatingSound()
@@ -537,6 +539,7 @@ class PracticeExecutionFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         if (isFragmentActive &&
             !hasNavigatedAway &&
             !hasCompletedRecording &&
