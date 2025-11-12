@@ -53,11 +53,11 @@ chaquopy {
     defaultConfig {
         version = "3.8"  // Python version
         pip {
-            install("numpy")
-            install("music21 == 8.3.0")
+            install("numpy==1.19.5")
+            install("music21==8.3.0")
             install("opencv-python-headless==4.5.1.48")
-            install("matplotlib")
-            install("pandas")
+            install("matplotlib==3.6.0")
+            install("pandas==1.3.2")
         }
     }
 }
