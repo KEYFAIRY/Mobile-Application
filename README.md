@@ -100,7 +100,7 @@ pip install pytest pytest-asyncio pytest-cov
 ```
 
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ### Check installation:
