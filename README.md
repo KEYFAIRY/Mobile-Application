@@ -72,3 +72,45 @@ write_timeout=30
 # Debug Configuration
 enable_logging=true
 ```
+
+## Steps to run unit tests
+
+### Create virtual environment :
+
+```bash
+python -m venv venv
+```
+
+### Activate virtual environment:
+
+```bash
+.\venv\Scripts\Activate.ps1
+```
+
+### Install pip:
+
+```bash
+python -m pip install --upgrade pip
+```
+
+### Install required test tools and project requirements:
+
+```bash
+pip install pytest pytest-asyncio pytest-cov
+```
+
+```bash
+pip install requirements.txt
+```
+
+### Check installation:
+
+```bash
+pytest --version
+```
+
+### Execute test:
+
+```bash
+python -m pytest tests/[name.py] -v --tb=short
+```
