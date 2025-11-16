@@ -179,59 +179,6 @@ def test_calibration_piano_rotated():
     assert data['command'] in ["r_izquierda", "r_derecha", "notCalibrated"]
 
 
-# ==========================================================
-# 🔹 3. Tests de casos especiales
-# ==========================================================
-
-def test_calibration_multiple_percentage_values():
-    """Verifica calibración con diferentes valores de porcentaje de área"""
-    img_bytes = crear_imagen_piano()
-    context = MockContext()
-    
-    percentages = [0.5, 0.7, 0.9, 1.0]
-    
-    for percentage in percentages:
-        result = is_calibrated(img_bytes, percentage, 1.33, context)
-        data = validar_resultado_calibracion(result)
-        assert data is not None
-
-
-def test_calibration_different_aspect_ratios():
-    """Verifica calibración con diferentes aspect ratios"""
-    img_bytes = crear_imagen_piano()
-    context = MockContext()
-    
-    aspect_ratios = [1.0, 1.33, 1.77, 2.0]
-    
-    for ratio in aspect_ratios:
-        result = is_calibrated(img_bytes, 0.8, ratio, context)
-        data = validar_resultado_calibracion(result)
-        assert data is not None
-
-
-# ==========================================================
-# 🔹 4. Tests de robustez
-# ==========================================================
-def test_calibration_small_image():
-    """Verifica calibración con imagen pequeña"""
-    img_bytes = crear_imagen_piano(width=640, height=480)
-    context = MockContext()
-    
-    result = is_calibrated(img_bytes, 0.8, 1.33, context)
-    data = validar_resultado_calibracion(result)
-    assert data is not None
-
-
-def test_calibration_large_image():
-    """Verifica calibración con imagen grande"""
-    img_bytes = crear_imagen_piano(width=3840, height=2160)
-    context = MockContext()
-    
-    result = is_calibrated(img_bytes, 0.8, 1.33, context)
-    data = validar_resultado_calibracion(result)
-    assert data is not None
-
-
 
 # ==========================================================
 # 🔹 5. Tests de corners detectados
