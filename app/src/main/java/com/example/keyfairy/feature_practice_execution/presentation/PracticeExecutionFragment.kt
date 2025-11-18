@@ -2,6 +2,7 @@ package com.example.keyfairy.feature_practice_execution.presentation
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.SoundPool
 import android.net.Uri
@@ -15,6 +16,7 @@ import android.view.LayoutInflater
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -74,6 +76,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private var durationCheckHandler: Handler? = null
     private var durationCheckRunnable: Runnable? = null
 
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -92,6 +95,7 @@ class PracticeExecutionFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setupFullscreenMode()
 
         // Verificar permisos antes de continuar
@@ -157,15 +161,17 @@ class PracticeExecutionFragment : BaseFragment() {
     }
 
     private fun calculateVideoLength() {
-        val secondsPerNote = (60 / (bpm ?: 120).toDouble()) * figure!!
+        val secondsPerBeat = (60 / (bpm ?: 120).toDouble())
 
-        msPerTick = (secondsPerNote * 1000).toLong()
+        msPerTick = (secondsPerBeat * 1000).toLong()
 
         val numberOfNotes = (((escalaNotes ?: 8) - 1) * 2) * (octaves ?: 1) + 1
-        videoLength = ((secondsPerNote * numberOfNotes) * 1000).toLong()
+        videoLength = ((secondsPerBeat * numberOfNotes * figure!!) * 1000).toLong()
 
-        // Se suma la duracion de un tick adicional para prevenir cortes justo en la nota final
-        videoLength += (secondsPerNote * 1000).toLong()
+        // Se suma la duracion de 5 beats adicionales
+        // Esto permite ignorar los 4 primeros desde el back
+        // Y prevenir cortes justo en la nota final
+        videoLength += (secondsPerBeat* 5 * 1000).toLong()
         Log.i("VIDEO-LEN2", videoLength.toString())
         Log.i("NOTES", escalaNotes.toString())
     }
@@ -237,16 +243,23 @@ class PracticeExecutionFragment : BaseFragment() {
         val countdownRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway) playSound("countdown")
         }
+//        val startMetronomeRunnable = Runnable {
+//            if (isFragmentActive && !hasNavigatedAway) {
+//                startMetronome(msPerTick)
+//            }
+//        }
         val startRecordingRunnable = Runnable {
             if (isFragmentActive && !hasNavigatedAway && isRecordingScheduled) {
                 startRecording(videoLength)
             }
         }
+//        scheduledRunnables.add(startMetronomeRunnable)
         scheduledRunnables.add(countdownRunnable)
         scheduledRunnables.add(startRecordingRunnable)
 
         scheduleHandler.postDelayed(countdownRunnable, 1000)
-        scheduleHandler.postDelayed(startRecordingRunnable, 7000)
+//        scheduleHandler.postDelayed(startMetronomeRunnable, 7010)
+        scheduleHandler.postDelayed(startRecordingRunnable, 6900)
     }
     private fun cancelScheduledTasks() {
         scheduledRunnables.forEach { scheduleHandler.removeCallbacks(it) }
@@ -328,6 +341,10 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun handleRecordEvent(recordEvent: VideoRecordEvent) {
         when (recordEvent) {
             is VideoRecordEvent.Start -> {
+                requireActivity().runOnUiThread {
+                    startMetronome(msPerTick)
+                }
+
                 Log.d("VideoRecording", "Recording started")
                 if (isFragmentActive) {
                     Toast.makeText(
@@ -335,7 +352,6 @@ class PracticeExecutionFragment : BaseFragment() {
                         "Grabación iniciada",
                         Toast.LENGTH_SHORT
                     ).show()
-                    startMetronome(msPerTick)
                 }
             }
 
@@ -403,23 +419,33 @@ class PracticeExecutionFragment : BaseFragment() {
         stopRepeatingSound()
 
         repeatingSoundHandler = Handler(Looper.getMainLooper())
-        metronomeBeatCount = 0L
 
-        playSound("metronome_tick")
+        metronomeBeatCount = 0L
         metronomeStartTime = SystemClock.elapsedRealtime()
 
+        playSound("sharp_metronome_tick")
+
+        metronomeBeatCount++
 
         repeatingSoundRunnable = object : Runnable {
             override fun run() {
                 if (recording != null && isFragmentActive && !hasNavigatedAway) {
+                    // Play the current tick sound
+                    if ((metronomeBeatCount % 4).toInt() == 0){
+                        playSound("sharp_metronome_tick")
+                    }
+                    else {
+                        playSound("metronome_tick")
+                    }
+
                     metronomeBeatCount++
 
-                    // Calculate exact time for next beat
                     val targetTime = metronomeStartTime + (metronomeBeatCount * intervalMs)
+
                     val currentTime = SystemClock.elapsedRealtime()
+
                     val actualDelay = (targetTime - currentTime).coerceAtLeast(0)
 
-                    playSound("metronome_tick")
                     repeatingSoundHandler?.postDelayed(this, actualDelay)
                 }
             }
@@ -474,6 +500,7 @@ class PracticeExecutionFragment : BaseFragment() {
     private fun preloadSounds() {
         soundIds["countdown"] = loadSound(R.raw.instruccioncuentaregresivasound)
         soundIds["metronome_tick"] = loadSound(R.raw.metronome_tick)
+        soundIds["sharp_metronome_tick"] = loadSound(R.raw.sharp_metronome_tick)
         Log.i("PLAYER", "All sounds preloaded")
     }
 
@@ -498,6 +525,7 @@ class PracticeExecutionFragment : BaseFragment() {
 
     override fun onPause() {
         super.onPause()
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         if (!hasNavigatedAway && !hasCompletedRecording) {
             stopCamera()
             stopRepeatingSound()
@@ -511,6 +539,7 @@ class PracticeExecutionFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
+        requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         if (isFragmentActive &&
             !hasNavigatedAway &&
             !hasCompletedRecording &&
@@ -524,7 +553,7 @@ class PracticeExecutionFragment : BaseFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         stopCamera()
-
+        requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (this::cameraExecutor.isInitialized) {
             cameraExecutor.shutdown()
         }

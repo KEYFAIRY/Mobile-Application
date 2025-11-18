@@ -9,30 +9,49 @@ Kotlin code of mobile application.
 ```bash
 com.example.keyfairy
 │
-├── 📁 feature_auth
-│   ├── 📁 data
-│   │   ├── 📁 mapper        # Maps between DTOs and domain models
-│   │   ├── 📁 remote
-│   │   │   ├── 📁 api       # Auth API definitions (Retrofit interfaces)
-│   │   │   ├── 📁 dto       # Data Transfer Objects for authentication
-│   │   │   └── 📁 repository # Auth repository implementations
-│   ├── 📁 domain
-│   │   ├── 📁 model         # Auth-related domain entities
-│   │   ├── 📁 repository    # Auth repository interfaces
-│   │   └── 📁 usecase       # Business logic for authentication
-│   └── 📁 presentation     # UI screens, ViewModels, adapters for Auth
-│
-├── 📁 feature_calibrate    # Pending structure for feature_calibrate
-├── 📁 feature_practice    # Same structure as feature_auth but specific to feature_practice
-├── 📁 feature_profile    # Same structure as feature_auth but specific to feature_profile
-├── 📁 feature_progress    # Same structure as feature_auth but specific to feature_progress
-├── 📁 feature_reports    # Same structure as feature_auth but specific to feature_reports
+├── 📁 feature_auth                  # Login and account creation
+├── 📁 feature_practice              # Scale selection for practice
+├── 📁 feature_calibrate             # Camera calibration
+├── 📁 feature_practice_execution    # Practice recording
+├── 📁 feature_check_video           # Preview practice video before sending
+├── 📁 feature_profile               # User profile
+├── 📁 feature_home                  # Main screen
+├── 📁 feature_progress              # Practice statistics
+├── 📁 feature_reports               # Practice history with reports
 │
 ├── 📁 utils
-│   ├── 📁 common            # General utilities and extensions
-│   ├── 📁 network           # Retrofit, OkHttp config, interceptors
-│   └── 📁 storage           # Local storage, SharedPrefs, encrypted storage
+│   ├── 📁 common           # Common utilities and extensions
+│   ├── 📁 network          # Retrofit, OkHttp, interceptors
+│   ├── 📁 enums            # Application enums
+│   ├── 📁 worker           # Work Manager configuration and functionality
+│   └── 📁 storage          # Local storage
+│
+├── KeyFairyApplication.kt  # Initializes the application
+└── MainActivity.kt         # Main activity
 ```
+
+Each feature folder has the following structure:
+
+```bash
+📁 feature_<module>
+├── 📁 data               # Data layer
+│   ├── 📁 mapper         # Maps DTOs to domain entities
+│   ├── 📁 remote         # Communication with the backend
+│   │   ├── 📁 api        # Interfaces for making backend requests
+│   │   └── 📁 dto        # DTOs for receiving backend responses
+│   └── 📁 repository     # Repository implementations for data operations
+├── 📁 domain             # Domain layer
+│   ├── 📁 model          # Domain models
+│   ├── 📁 repository     # Interfaces for data operations
+│   └── 📁 use_case       # Use cases (business logic)
+├── 📁 presentation       # Presentation layer
+│   ├── 📁 activity       # Activities
+│   ├── 📁 fragment       # Fragments
+│   ├── 📁 state          # UI states
+│   ├── 📁 viewmodel      # ViewModels for managing UI states
+│   └── 📁 adapter        # Adapters
+```
+
 
 ## Run the app
 

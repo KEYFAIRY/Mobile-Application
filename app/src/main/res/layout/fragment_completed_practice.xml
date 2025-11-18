@@ -50,6 +50,7 @@
                             android:layout_height="wrap_content"
                             android:layout_toStartOf="@+id/pdfDataCard"
                             android:layout_alignParentLeft="true"
+                            android:layout_centerInParent="true"
                             android:orientation="vertical">
 
                             <LinearLayout
@@ -228,6 +229,15 @@
                     android:text="Errores posturales">
                 </TextView>
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/dark_brown"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Solo podrás ver los errores en el video si fue grabado en este dispositivo y lo tienes en la galería. De lo contrario, solo podrás acceder al pdf.">
+                </TextView>
+
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -272,6 +282,7 @@
                             android:layout_centerVertical="true"
                             android:layout_toEndOf="@+id/posturalErrors"
                             android:orientation="vertical">
+
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
@@ -318,6 +329,15 @@
                     android:textSize="25sp"
                     android:textStyle="bold"
                     android:text="Errores musicales">
+                </TextView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/dark_red"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Solo podrás ver los errores en el video si fue grabado en este dispositivo y lo tienes en la galería. De lo contrario, solo podrás acceder al pdf.">
                 </TextView>
 
                 <androidx.cardview.widget.CardView

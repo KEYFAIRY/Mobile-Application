@@ -17,7 +17,7 @@ import com.example.keyfairy.R
 import com.example.keyfairy.databinding.ActivityHomeBinding
 import com.example.keyfairy.feature_calibrate.presentation.CalibrateCameraFragment
 import com.example.keyfairy.feature_check_video.presentation.fragment.CheckVideoFragment
-import com.example.keyfairy.feature_progress.presentation.ProgressFragment
+import com.example.keyfairy.feature_progress.presentation.fragment.ProgressFragment
 import com.example.keyfairy.feature_practice.presentation.PracticeFragment
 import com.example.keyfairy.feature_practice_execution.presentation.PracticeExecutionFragment
 import com.example.keyfairy.feature_profile.presentation.fragments.ProfileFragment
@@ -120,39 +120,6 @@ class HomeActivity : AppCompatActivity() {
             fragment = fragment,
             containerId = R.id.fragment_container,
             navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
-        )
-    }
-
-    // Para navegación desde fragments (deprecated - usar extensiones)
-    @Deprecated("Use fragment extensions instead", ReplaceWith("fragment.navigateAndClearStack(targetFragment, R.id.fragment_container)"))
-    fun replaceFragment(fragment: Fragment) {
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
-        )
-    }
-
-    // Para flujos lineales (como práctica)
-    fun navigateToLinearFlow(fragment: Fragment) {
-        hideBottomNavigation()
-
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.REPLACE_WITH_CLEAR_STACK
-        )
-    }
-
-    // Para navegación modal/overlay
-    fun navigateToModal(fragment: Fragment) {
-        NavigationManager.navigateToFragment(
-            fragmentManager = supportFragmentManager,
-            fragment = fragment,
-            containerId = R.id.fragment_container,
-            navigationType = NavigationManager.NavigationType.ADD_TO_STACK
         )
     }
 

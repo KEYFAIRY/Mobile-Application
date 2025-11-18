@@ -182,7 +182,7 @@ class HomeFragment : BaseFragment() {
             .setMessage(
                 "Para reproducir los videos grabados necesitamos acceso COMPLETO a tus videos.\n\n" +
                         "⚠️ IMPORTANTE: Cuando aparezca la solicitud de permisos, asegúrate de seleccionar " +
-                        "'Permitir' para acceso completo"
+                        "'Permitir' para acceso completo."
             )
             .setPositiveButton("Continuar") { _, _ ->
                 multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())

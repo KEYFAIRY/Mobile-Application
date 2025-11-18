@@ -53,10 +53,11 @@ chaquopy {
     defaultConfig {
         version = "3.8"  // Python version
         pip {
-            install("numpy")
-            install("music21 == 8.3.0")
+            install("numpy==1.19.5")
+            install("music21==8.3.0")
             install("opencv-python-headless==4.5.1.48")
-
+            install("matplotlib==3.6.0")
+            install("pandas==1.3.2")
         }
     }
 }
@@ -105,4 +106,6 @@ dependencies {
 
     // Worker
     implementation("androidx.work:work-runtime-ktx:2.8.1")
+    //Sync Now
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
 }
