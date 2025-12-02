@@ -30,7 +30,7 @@ class YOLO11Segmentation(private val context: Context) {
     init {
         loadModel()
     }
-
+// Para mejorar el modelo utilizado, solo es necesario cargar el nuevo modelo exportado a ONNX dentro de la carpeta assets y colocar su nombre
     private fun loadModel(): Boolean {
         return try {
             val modelBytes = context.assets.open("yolo11n-seg-custom.onnx").use { it.readBytes() }
@@ -44,10 +44,7 @@ class YOLO11Segmentation(private val context: Context) {
         }
     }
 
-    /**
-     * Preprocess: letterbox-like: scale image to width=modelSize, keep aspect, pad bottom if needed (same as Python).
-     * Returns FloatBuffer (NCHW) and pair(originalWidth, originalHeight).
-     */
+
     private fun preprocessImage(originalBitmap: Bitmap, pianoAreaPercentage: Float): Pair<FloatBuffer, Pair<Int, Int>> {
 //        println("Origina image size: ${originalBitmap.width}x${originalBitmap.height}")
 
@@ -147,12 +144,7 @@ class YOLO11Segmentation(private val context: Context) {
 
     }
 
-    /**
-     * Postprocess predictions and mask prototypes (flat arrays).
-     * predictions flat layout assumed: shape [C, N] flattened as (C * N) with C=37
-     * We'll infer numDetections = preds.size / 37.
-     * Returns list of Detection and the maskPrototypes flat array (unchanged).
-     */
+
     private fun postprocessSegmentation(
         predictions: FloatArray,
         maskPrototypes: FloatArray,
@@ -297,9 +289,6 @@ class YOLO11Segmentation(private val context: Context) {
 //        return maskBitmap
     }
 
-    /**
-     * Run full pipeline on a Bitmap and return final mask bitmap (white object on black background).
-     */
     fun processImage(bitmap: Bitmap, pianoAreaPercentage: Float): Bitmap {
         if (ortSession == null) {
             println("ONNX session not loaded!")
@@ -310,11 +299,10 @@ class YOLO11Segmentation(private val context: Context) {
             val (inputBuffer, dims) = preprocessImage(bitmap, pianoAreaPercentage)
             val (origW, origH) = dims
 
-            // Create ONNX tensor (wrap FloatBuffer). Shape [1,3,608,608]
+            // Se crea el tensor ONNX
             val shape = longArrayOf(1, 3, modelSize.toLong(), modelSize.toLong())
             val inputTensor = OnnxTensor.createTensor(ortEnv, inputBuffer, shape)
 
-            // Run and ensure outputs/results are closed
             ortSession!!.run(mapOf(ortSession!!.inputNames.first() to inputTensor)).use { results ->
                 // results[0] -> predictions tensor ; results[1] -> mask prototypes
 //                println("Number of outputs: ${results.size()}")
@@ -340,22 +328,22 @@ class YOLO11Segmentation(private val context: Context) {
                 val protos = FloatArray(protoBuf.remaining())
                 protoBuf.get(protos)
 
-                // Close tensors (they will be closed when results is closed, but safe to close explicitly)
+                // Se cierran los tensores
                 predTensor.close()
                 protoTensor.close()
                 inputTensor.close()
 
-                // Postprocess
+                // Postprocesado
                 val (detections, maskProtos) = postprocessSegmentation(preds, protos, origW, origH)
                 if (detections.isEmpty()) {
                     return bitmap.copy(Bitmap.Config.ARGB_8888, true)
                 }
 
-                // choose best detection
+                // Elegir la mejor deteccion
                 val best = detections.maxByOrNull { it.confidence } ?: return bitmap.copy(Bitmap.Config.ARGB_8888, true)
 //                println("Best detection confidence: ${best.confidence}")
 
-                // Generate mask
+                // Generacion de la mascara
                 val mask = generateMask(best.maskCoeffs, maskProtos, origW, origH, best.bbox)
                 return mask ?: bitmap.copy(Bitmap.Config.ARGB_8888, true)
             }
@@ -375,7 +363,6 @@ class YOLO11Segmentation(private val context: Context) {
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
                 ?: throw Exception("Failed to decode image")
 
-            // DESCOMENTAR PARA RERESAR AL OIGINAL
             val resultBitmap = processImage(bitmap, pianoAreaPercentage)
 //            val resultBitmap = preprocessImageTest(bitmap)
 

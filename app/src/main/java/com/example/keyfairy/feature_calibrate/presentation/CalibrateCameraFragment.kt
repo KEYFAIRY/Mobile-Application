@@ -319,9 +319,22 @@ class CalibrateCameraFragment : BaseFragment() {
             vuBuffer.get(nv21, ySize, vuSize)
 
             val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+            // Este valor es calculado y mandado a python debido a que el porcentaje del piano se
+            // es calculado segun la imagen capturada por el celular y python recibe una imagen de 608x608 siempre
+            // por lo que es necesario que reciba el ratio del alto de la imagen para que calcule el alto teniendo en cuenta los 608
+            // las dimensiones de la imagen capturada por el celular pueden cambiar, de esta manera se asegura compatibilidad
             val heightToWidthRatio = image.height/image.width.toFloat()
+
+            // Se divide entre 608 debido a que es la medida a la que se ajusta la imagen en python
+            // se hace un resize a 608px establecido por la constante RESIZE_WIDTH en calibracion.py
             val scalingRatio = previewView.width / 608f
+
+            // Utilizamos regla de 3 para obtener la altura real del previewView, conocemos su ancho y las medidas
+            // Resultantes del frame capturado (ancho y alto) que es la variable <image>
             val phonePreviewTotalHeight = (previewView.width * image.height) / image.width.toFloat()
+            // Con la altura total de la preview (La cual no se evidencia con totalidad en pantalla
+            // Debido a como android ajusta la imagen a la pantalla), podemos obtener el porcentaje
+            // Que corresponde al area del piano.
             val frameCapturedPianoAreaPercentage = pianoAreaSection.height / phonePreviewTotalHeight
 
             val out = ByteArrayOutputStream()
